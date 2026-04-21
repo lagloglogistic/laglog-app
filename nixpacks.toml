@@ -1,0 +1,5 @@
+[phases.install]
+cmds = ["python -m pip install -r requirements.txt"]
+
+[start]
+cmd = "gunicorn app:app --bind 0.0.0.0:${PORT:-8080} --workers 1 --timeout 120 --preload"
