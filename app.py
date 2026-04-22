@@ -21,10 +21,8 @@ from reportlab.lib.enums import TA_RIGHT, TA_CENTER
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
 LOGO_PATH   = os.path.join(BASE_DIR, 'static', 'img', 'logo.jpg')
 
-# Railway: use mounted volume at /data, fallback to ./data locally
-DATA_DIR = os.environ.get('DATA_DIR', '/data')
-if not os.path.exists(DATA_DIR):
-    DATA_DIR = os.path.join(BASE_DIR, 'data')
+# Data directory: use env var if set, otherwise use ./data next to app.py
+DATA_DIR = os.environ.get('DATA_DIR', os.path.join(BASE_DIR, 'data'))
 os.makedirs(DATA_DIR, exist_ok=True)
 
 DATA_FILE   = os.path.join(DATA_DIR, 'db.json')
@@ -298,8 +296,22 @@ def set_config():
 @app.route('/api/config/test-smtp', methods=['POST'])
 @login_required
 def test_smtp():
-    try: _smtp_connect(load_config()); return jsonify({'ok':True,'message':'Verbindung erfolgreich!'})
-    except Exception as e: return jsonify({'ok':False,'message':str(e)}), 400
+    import threading
+    result = {'ok': False, 'message': 'Timeout — Server nicht erreichbar'}
+    def try_connect():
+        try:
+            _smtp_connect(load_config())
+            result['ok'] = True
+            result['message'] = 'Verbindung erfolgreich!'
+        except Exception as e:
+            result['ok'] = False
+            result['message'] = str(e)
+    t = threading.Thread(target=try_connect)
+    t.daemon = True
+    t.start()
+    t.join(timeout=8)  # max 8 seconds
+    status = 200 if result['ok'] else 400
+    return jsonify(result), status
 
 # ── Customers ─────────────────────────────────────────────
 @app.route('/api/customers', methods=['GET'])
