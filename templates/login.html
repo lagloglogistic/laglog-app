@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LAGLOG — Anmelden</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f3f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:white;border-radius:12px;border:1px solid rgba(0,0,0,0.1);padding:40px;width:100%;max-width:380px;box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+.logo-wrap{text-align:center;margin-bottom:28px}
+.logo-wrap img{height:64px;width:auto}
+.logo-wrap h1{font-size:22px;font-weight:700;letter-spacing:.08em;margin-top:10px;color:#1a1a1a}
+.logo-wrap p{font-size:11px;color:#888;letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
+.form-title{font-size:14px;font-weight:600;color:#1a1a1a;margin-bottom:20px;text-align:center}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fg label{font-size:11px;font-weight:600;color:#555;letter-spacing:.02em}
+.fg input{padding:10px 12px;border:1px solid rgba(0,0,0,0.18);border-radius:6px;font-size:14px;font-family:inherit;transition:border-color .15s;background:white;color:#1a1a1a}
+.fg input:focus{outline:none;border-color:#1a1a1a;box-shadow:0 0 0 3px rgba(26,26,26,0.08)}
+.btn-login{width:100%;padding:11px;background:#1a1a1a;color:white;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:6px}
+.btn-login:hover{background:#333}
+.btn-login:disabled{opacity:.5;cursor:not-allowed}
+.error{background:#fdf0f0;border:1px solid rgba(139,26,26,0.2);color:#8b1a1a;padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:14px;display:none}
+.footer{text-align:center;margin-top:20px;font-size:11px;color:#aaa}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo-wrap">
+    <img src="/static/img/logo.jpg" alt="LAGLOG">
+    <h1>LAGLOG</h1>
+    <p>Lagonis Logistics</p>
+  </div>
+  <div class="form-title">Bitte anmelden</div>
+  <div class="error" id="err-msg"></div>
+  <div class="fg">
+    <label>Benutzername</label>
+    <input type="text" id="username" placeholder="admin" autocomplete="username" autofocus>
+  </div>
+  <div class="fg">
+    <label>Passwort</label>
+    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+  </div>
+  <button class="btn-login" id="btn-login" onclick="doLogin()">Anmelden</button>
+  <div class="footer">LAGLOG · Lagonis Logistics GmbH</div>
+</div>
+<script>
+async function doLogin(){
+  const btn=document.getElementById('btn-login');
+  const err=document.getElementById('err-msg');
+  const u=document.getElementById('username').value.trim();
+  const p=document.getElementById('password').value;
+  if(!u||!p){err.textContent='Bitte Benutzername und Passwort eingeben';err.style.display='block';return}
+  btn.disabled=true;btn.textContent='Anmelden…';err.style.display='none';
+  try{
+    const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const d=await r.json();
+    if(d.ok){window.location.href='/'}
+    else{err.textContent=d.message||'Anmeldung fehlgeschlagen';err.style.display='block';btn.disabled=false;btn.textContent='Anmelden'}
+  }catch(e){err.textContent='Verbindungsfehler';err.style.display='block';btn.disabled=false;btn.textContent='Anmelden'}
+}
+</script>
+</body>
+</html>
