@@ -86,7 +86,7 @@ def admin_required(f):
 # DATA_DIR is set via RAILWAY_VOLUME_MOUNT_PATH or defaults to ./data
 
 def load_db():
-    empty = {'orders':[], 'invoices':[], 'customers':[], 'order_counter':1}
+    empty = {'orders':[], 'invoices':[], 'customers':[], 'inquiries':[], 'order_counter':1}
     if not os.path.exists(DATA_FILE):
         os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
         with open(DATA_FILE, 'w', encoding='utf-8') as f:
@@ -95,7 +95,7 @@ def load_db():
     try:
         with open(DATA_FILE, encoding='utf-8') as f:
             db = json.load(f)
-        for k,v in [('customers',[]),('order_counter',len(db.get('orders',[]))+1)]:
+        for k,v in [('customers',[]),('inquiries',[]),('order_counter',len(db.get('orders',[]))+1)]:
             if k not in db: db[k] = v
         return db
     except Exception as e:
@@ -688,6 +688,48 @@ def ping():
 def keepalive():
     """Lightweight endpoint for keep-alive pings"""
     return jsonify({'ok': True, 'ts': datetime.now().isoformat()})
+
+# ── Inquiries ────────────────────────────────────────────
+@app.route('/api/inquiries', methods=['GET'])
+@login_required
+def get_inquiries():
+    return jsonify(load_db().get('inquiries', []))
+
+@app.route('/api/inquiries', methods=['POST'])
+@login_required
+def create_inquiry():
+    db = load_db(); inq = request.json
+    inq['id'] = str(uuid.uuid4())
+    inq['createdAt'] = datetime.now().isoformat()
+    inq['createdBy'] = current_user()['username']
+    if 'inquiries' not in db: db['inquiries'] = []
+    db['inquiries'].append(inq)
+    save_db(db)
+    return jsonify(inq), 201
+
+@app.route('/api/inquiries/<iid>', methods=['PUT'])
+@login_required
+def update_inquiry(iid):
+    db = load_db()
+    for i, inq in enumerate(db.get('inquiries', [])):
+        if inq['id'] == iid:
+            upd = request.json
+            upd['id'] = iid
+            upd['createdAt'] = inq.get('createdAt', '')
+            upd['createdBy'] = inq.get('createdBy', '')
+            upd['updatedBy'] = current_user()['username']
+            db['inquiries'][i] = upd
+            save_db(db)
+            return jsonify(upd)
+    return jsonify({'error': 'not found'}), 404
+
+@app.route('/api/inquiries/<iid>', methods=['DELETE'])
+@login_required
+def delete_inquiry(iid):
+    db = load_db()
+    db['inquiries'] = [x for x in db.get('inquiries', []) if x['id'] != iid]
+    save_db(db)
+    return jsonify({'ok': True})
 
 # ── Email ─────────────────────────────────────────────────
 def _smtp_connect(cfg):
