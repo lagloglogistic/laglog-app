@@ -464,54 +464,9 @@ select.fs:focus{outline:none;border-color:var(--accent2)}
           <div class="fg s3"><label>Chassis</label><input type="text" id="f-chassis"></div>
         </div>
       </div>
-      <div class="form-sec">
-        <div class="fs-title">Station 1 — Abholung Terminal</div>
-        <div class="g4">
-          <div class="fg"><label>Von</label><input type="datetime-local" id="f-s1-von"></div>
-          <div class="fg"><label>Bis (ATB)</label><input type="datetime-local" id="f-s1-bis"></div>
-          <div class="fg"><label>Plan</label><input type="datetime-local" id="f-s1-plan"></div>
-          <div class="fg"><label>Ref.</label><input type="text" id="f-s1-ref" placeholder="via GP"></div>
-          <div class="fg s4"><label>Name / Firma</label><input type="text" id="f-s1-name" placeholder="HHLA Container Terminal Burchardkai GmbH"></div>
-          <div class="fg s4"><label>Straße / Adresse</label><input type="text" id="f-s1-addr" placeholder="Burchardkai"></div>
-          <div class="fg s2"><label>PLZ</label><input type="text" id="f-s1-zip" placeholder="21129"></div>
-          <div class="fg s2"><label>Ort</label><input type="text" id="f-s1-city" placeholder="Hamburg"></div>
-          <div class="fg s2"><label>Reederei</label><input type="text" id="f-s1-reederei" placeholder="ORIENT OVERSEAS LINE"></div>
-          <div class="fg"><label>Hafen</label><input type="text" id="f-s1-hafen" placeholder="SHANGHAI"></div>
-          <div class="fg"><label>Schiff</label><input type="text" id="f-s1-schiff" placeholder="EVER GENIUS"></div>
-          <div class="fg"><label>Zollnr.</label><input type="text" id="f-s1-zoll"></div>
-        </div>
-      </div>
-      <div class="form-sec">
-        <div class="fs-title">Station 2 — Empfänger / Kunde</div>
-        <div class="g4">
-          <div class="fg"><label>Von</label><input type="datetime-local" id="f-s2-von"></div>
-          <div class="fg"><label>Bis (ATB)</label><input type="datetime-local" id="f-s2-bis"></div>
-          <div class="fg"><label>Plan</label><input type="datetime-local" id="f-s2-plan"></div>
-          <div class="fg"><label>Ref.</label><input type="text" id="f-s2-ref"></div>
-          <div class="fg s4 autocomplete-wrap">
-            <label>Name / Firma <span style="font-size:10px;color:var(--blue);font-weight:400">— Kundendaten werden automatisch vorgeschlagen</span></label>
-            <input type="text" id="f-s2-name" placeholder="Mustermann GmbH" oninput="acStation2(this)" autocomplete="off">
-            <div class="ac-list" id="ac-s2"></div>
-          </div>
-          <div class="fg s4"><label>Straße / Adresse</label><input type="text" id="f-s2-addr" placeholder="Musterstraße 1"></div>
-          <div class="fg s2"><label>PLZ</label><input type="text" id="f-s2-zip" placeholder="21244"></div>
-          <div class="fg s2"><label>Ort</label><input type="text" id="f-s2-city" placeholder="Buchholz"></div>
-          <div class="fg"><label>Hafen</label><input type="text" id="f-s2-hafen"></div>
-          <div class="fg"><label>Schiff</label><input type="text" id="f-s2-schiff"></div>
-        </div>
-      </div>
-      <div class="form-sec">
-        <div class="fs-title">Station 3 — Rückgabe Depot</div>
-        <div class="g4">
-          <div class="fg"><label>Plan</label><input type="datetime-local" id="f-s3-plan"></div>
-          <div class="fg"><label>Ref.</label><input type="text" id="f-s3-ref" placeholder="OOCL"></div>
-          <div class="fg"><label>Zollnr.</label><input type="text" id="f-s3-zoll"></div>
-          <div class="fg"><label>Reederei</label><input type="text" id="f-s3-reederei"></div>
-          <div class="fg s4"><label>Name / Firma</label><input type="text" id="f-s3-name" placeholder="REMAIN GmbH Container-Depot and Repair"></div>
-          <div class="fg s2"><label>Straße / Adresse</label><input type="text" id="f-s3-addr" placeholder="Dradenauer Deichweg 1"></div>
-          <div class="fg"><label>PLZ</label><input type="text" id="f-s3-zip" placeholder="21129"></div>
-          <div class="fg"><label>Ort</label><input type="text" id="f-s3-city" placeholder="Hamburg"></div>
-        </div>
+      <div id="stations-container"></div>
+      <div style="margin-bottom:16px">
+        <button class="btn btn-sm" onclick="addStation()" style="gap:6px">＋ Station hinzufügen</button>
       </div>
       <div class="form-sec">
         <div class="fs-title">Container</div>
@@ -937,25 +892,31 @@ function ordersTableHTML(list,compact){
   const rows=list.map(o=>{
     const tw=(o.containers||[]).reduce((a,c)=>a+(parseFloat(c.weight)||0),0);
     const cb=compact?'':` <td class="cbc"><input type="checkbox" class="ocb" data-id="${o.id}" onchange="toggleO(this)" ${selOrders.has(o.id)?'checked':''}></td>`;
-    const city=o.s2city?` (${o.s2city})`:'';
+    const s1info=[o.s1name,o.s1city].filter(Boolean).join(', ');
+    const s2info=[o.s2name||o.s2addr,o.s2city].filter(Boolean).join(', ');
+    const shipInfo=[o.s1reederei,o.s1hafen].filter(Boolean).join(' / ');
+    const ctypes=(o.containers||[]).map(c=>`<span class="badge" style="background:var(--blue-bg);color:var(--blue);font-size:9px;padding:1px 6px">${c.type||'?'}</span>`).join(' ')||'–';
     return`<tr class="${selOrders.has(o.id)?'sel':''}">
       ${cb}
-      <td><strong>${o.nr}</strong></td>
+      <td><strong>${o.nr}</strong>${o.author?`<br><span style="font-size:10px;color:var(--text3)">${o.author}</span>`:''}
       <td style="font-size:11px;color:var(--text3)">${o.createdAt?new Date(o.createdAt).toLocaleDateString('de-DE'):'–'}</td>
-      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.s2addr||'–'}${city}</td>
-      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${o.s1reederei||'–'}</td>
-      <td style="text-align:center">${(o.containers||[]).length}</td>
+      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${s1info}">${s1info||'–'}</td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s2info}">${s2info||'–'}</td>
+      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${shipInfo}">${shipInfo||'–'}</td>
+      <td style="font-size:11px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.s1schiff||'–'}</td>
+      <td>${ctypes}</td>
       <td style="text-align:right">${tw?tw.toLocaleString('de-DE'):'–'}</td>
       <td><span class="badge badge-open">Offen</span></td>
       <td><div class="acts">
         <button class="btn btn-sm" onclick="viewOrder('${o.id}')">Ansehen</button>
+        <button class="btn btn-sm btn-dark" onclick="editOrderDirect('${o.id}')" title="Bearbeiten">✏</button>
         ${!hasInv(o.id)?`<button class="btn btn-sm btn-green" onclick="openInvoiceFromId('${o.id}')">Rechnung</button>`:'<span style="font-size:10px;color:var(--text3)">✓ Abgr.</span>'}
         <button class="btn btn-sm" onclick="openLangPicker('order-email','${o.id}')" title="E-Mail">✉</button>
         <button class="btn btn-sm btn-red" onclick="delOrder('${o.id}')">✕</button>
       </div></td>
     </tr>`;
   }).join('');
-  return`<table><thead><tr>${cbH}<th>Nr.</th><th>Erstellt</th><th>Empfänger</th><th>Reederei</th><th>Cont.</th><th style="text-align:right">Gew.</th><th>Status</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return`<table><thead><tr>${cbH}<th>Nr.</th><th>Erstellt</th><th>Abholung</th><th>Empfänger / Ort</th><th>Reederei / Hafen</th><th>Schiff</th><th>Container</th><th style="text-align:right">Gew. kg</th><th>Status</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 function toggleO(cb){const id=cb.dataset.id;if(cb.checked)selOrders.add(id);else selOrders.delete(id);updateOBar();cb.closest('tr').className=cb.checked?'sel':'';}
 function toggleAllO(c){visOIds.forEach(id=>c?selOrders.add(id):selOrders.delete(id));document.querySelectorAll('.ocb').forEach(cb=>{cb.checked=c;cb.closest('tr').className=c?'sel':''});updateOBar()}
@@ -1175,42 +1136,113 @@ async function sendEmail(){
 
 // ── ORDER FORM ─────────────────────────────────────────
 let cfg_name='Lagonis Logistics';
+// ── DYNAMIC STATIONS ───────────────────────────────────
+let _stations=[];
+const STATION_DEFAULTS=[
+  {label:'Abholung Terminal',fields:['von','bis','plan','ref','name','addr','zip','city','reederei','hafen','schiff','zoll']},
+  {label:'Empfänger / Kunde',fields:['von','bis','plan','ref','name','addr','zip','city','hafen','schiff']},
+  {label:'Rückgabe Depot',fields:['plan','ref','zoll','reederei','name','addr','zip','city']},
+];
+const FIELD_DEFS={
+  von:{l:'Von',t:'datetime-local'},bis:{l:'Bis (ATB)',t:'datetime-local'},
+  plan:{l:'Plan',t:'datetime-local'},ref:{l:'Ref.',t:'text'},
+  name:{l:'Name / Firma',t:'text',cls:'s4'},addr:{l:'Straße / Adresse',t:'text',cls:'s4'},
+  zip:{l:'PLZ',t:'text',cls:'s2'},city:{l:'Ort',t:'text',cls:'s2'},
+  reederei:{l:'Reederei',t:'text',cls:'s2'},hafen:{l:'Hafen',t:'text'},
+  schiff:{l:'Schiff',t:'text'},zoll:{l:'Zollnr.',t:'text'},
+};
+function renderStations(){
+  const sc=document.getElementById('stations-container');if(!sc)return;
+  sc.innerHTML=_stations.map((st,i)=>{
+    const isRecip=i===1;
+    const fkeys=STATION_DEFAULTS[Math.min(i,2)]?.fields||STATION_DEFAULTS[2].fields;
+    const fields=fkeys.map(fk=>{
+      const fd=FIELD_DEFS[fk];const val=st[fk]||'';const cls=fd.cls?` ${fd.cls}`:'';
+      if(fk==='name'&&isRecip)return`<div class="fg s4 autocomplete-wrap"><label>Name / Firma <span style="font-size:10px;color:var(--blue)">— Autocomplete</span></label><input type="text" value="${val}" oninput="_stations[${i}].name=this.value;acStDyn(this,${i})" autocomplete="off"><div class="ac-list" id="ac-st-${i}"></div></div>`;
+      return`<div class="fg${cls}"><label>${fd.l}</label><input type="${fd.t}" value="${val}" onchange="_stations[${i}]['${fk}']=this.value"></div>`;
+    }).join('');
+    return`<div class="form-sec" style="border-left:3px solid var(--accent2);padding-left:14px;margin-bottom:16px">
+      <div class="fs-title" style="justify-content:space-between;align-items:center">
+        <span style="display:flex;align-items:center;gap:8px">
+          <span style="background:var(--accent);color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${i+1}</span>
+          Station ${i+1} — ${st.label||'Station'}
+        </span>
+        ${_stations.length>1?`<button onclick="removeStation(${i})" style="background:none;border:none;color:var(--red-mid);cursor:pointer;font-size:18px;padding:0 4px;line-height:1" title="Station entfernen">－</button>`:''}
+      </div>
+      <div class="g4">${fields}</div>
+    </div>`;
+  }).join('');
+}
+function addStation(data=null){
+  const i=_stations.length;
+  const def=STATION_DEFAULTS[Math.min(i,2)];
+  _stations.push({label:def?.label||('Station '+(i+1)),...(data||{})});
+  renderStations();
+}
+function removeStation(i){
+  if(_stations.length<=1){toast('Mindestens eine Station erforderlich','err');return}
+  if(!confirm('Station '+(i+1)+' wirklich entfernen?'))return;
+  _stations.splice(i,1);renderStations();
+}
+function acStDyn(input,si){
+  const q=input.value.trim().toLowerCase();const el=document.getElementById('ac-st-'+si);
+  if(!el||q.length<1){if(el)el.className='ac-list';return}
+  const m=customers.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.city||'').toLowerCase().includes(q)).slice(0,7);
+  if(!m.length){el.className='ac-list';return}
+  el.innerHTML=m.map(c=>`<div class="ac-item" onclick="fillStDyn(${si},'${c.id}')"><div class="ac-name">${highlight(c.name||'',q)}</div><div class="ac-sub">${[c.addr,[c.zip,c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')||'–'}</div></div>`).join('');
+  el.className='ac-list show';
+}
+function fillStDyn(si,cid){
+  const cu=customers.find(x=>x.id===cid);if(!cu)return;
+  _stations[si].name=cu.name||'';_stations[si].addr=cu.addr||'';
+  _stations[si].zip=cu.zip||'';_stations[si].city=cu.city||'';
+  renderStations();document.getElementById('ac-st-'+si)?.classList.remove('show');
+}
+function stationsToOrder(o){
+  const fields=['von','bis','plan','ref','name','addr','zip','city','reederei','hafen','schiff','zoll'];
+  ['s1','s2','s3'].forEach((pfx,i)=>{const st=_stations[i]||{};fields.forEach(f=>o[pfx+f]=st[f]||'')});
+  o.extraStations=_stations.slice(3);return o;
+}
+function orderToStations(o){
+  const fields=['von','bis','plan','ref','name','addr','zip','city','reederei','hafen','schiff','zoll'];
+  _stations=['s1','s2','s3'].map((pfx,i)=>{
+    const st={label:STATION_DEFAULTS[i]?.label||('Station '+(i+1))};
+    fields.forEach(f=>st[f]=o[pfx+f]||'');return st;
+  });
+  if(o.extraStations?.length)_stations.push(...o.extraStations);
+  renderStations();
+}
 async function openNewOrder(){
-  cOrderId=null;cidx=0;
+  cOrderId=null;cidx=0;_stations=[];
   document.getElementById('order-modal-title').textContent='Neuer Auftrag';
-  const fields=['nr','author','vehicle','chassis',
-    's1-von','s1-bis','s1-plan','s1-name','s1-addr','s1-zip','s1-city','s1-reederei','s1-hafen','s1-schiff','s1-ref','s1-zoll',
-    's2-von','s2-bis','s2-plan','s2-name','s2-addr','s2-zip','s2-city','s2-ref','s2-hafen','s2-schiff',
-    's3-plan','s3-name','s3-addr','s3-zip','s3-city','s3-reederei','s3-ref','s3-zoll','remarks'];
-  fields.forEach(k=>{const el=document.getElementById('f-'+k);if(el)el.value=''});
+  ['nr','author','vehicle','chassis','remarks'].forEach(k=>{const el=document.getElementById('f-'+k);if(el)el.value=''});
   document.getElementById('f-showPrice').checked=false;
   document.getElementById('container-list').innerHTML='';
+  STATION_DEFAULTS.forEach((_,i)=>addStation());
   const nr=await api('/api/orders/next-nr');
   document.getElementById('f-nr').value=nr.nr||'';
+  if(_cfgDefaults.default_author)document.getElementById('f-author').value=_cfgDefaults.default_author;
+  if(_cfgDefaults.show_price_default)document.getElementById('f-showPrice').checked=true;
   addContainerRow();openModal('mo-order');
-  // Apply config defaults
-  if(_cfgDefaults.default_author) document.getElementById('f-author').value=_cfgDefaults.default_author;
-  if(_cfgDefaults.show_price_default) document.getElementById('f-showPrice').checked=true;
   setTimeout(()=>document.getElementById('f-author').focus(),100);
 }
-function editCurrentOrder(){
-  const o=orders.find(x=>x.id===cOrderId);if(!o)return;
-  closeModal('mo-view-order');cidx=0;
+function _openEditOrder(o){
+  cidx=0;
   document.getElementById('order-modal-title').textContent='Auftrag bearbeiten';
-  const map={
-    'nr':'nr','author':'author','vehicle':'vehicle','chassis':'chassis',
-    's1-von':'s1von','s1-bis':'s1bis','s1-plan':'s1plan','s1-name':'s1name','s1-addr':'s1addr','s1-zip':'s1zip','s1-city':'s1city',
-    's1-reederei':'s1reederei','s1-hafen':'s1hafen','s1-schiff':'s1schiff','s1-ref':'s1ref','s1-zoll':'s1zoll',
-    's2-von':'s2von','s2-bis':'s2bis','s2-plan':'s2plan','s2-name':'s2name','s2-addr':'s2addr','s2-zip':'s2zip','s2-city':'s2city',
-    's2-ref':'s2ref','s2-hafen':'s2hafen','s2-schiff':'s2schiff',
-    's3-plan':'s3plan','s3-name':'s3name','s3-addr':'s3addr','s3-zip':'s3zip','s3-city':'s3city',
-    's3-reederei':'s3reederei','s3-ref':'s3ref','s3-zoll':'s3zoll','remarks':'remarks'
-  };
-  for(const[fid,key]of Object.entries(map)){const el=document.getElementById('f-'+fid);if(el)el.value=o[key]||''}
+  ['nr','author','vehicle','chassis','remarks'].forEach(k=>{const el=document.getElementById('f-'+k);if(el)el.value=o[k]||''});
   document.getElementById('f-showPrice').checked=!!o.showPrice;
   document.getElementById('container-list').innerHTML='';
   (o.containers||[]).forEach(c=>addContainerRow(c));
+  orderToStations(o);
   openModal('mo-order');
+}
+function editCurrentOrder(){
+  const o=orders.find(x=>x.id===cOrderId);if(!o)return;
+  closeModal('mo-view-order');_openEditOrder(o);
+}
+function editOrderDirect(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  cOrderId=id;_openEditOrder(o);
 }
 function addContainerRow(data){
   const i=cidx++;const d=data||{};
@@ -1229,18 +1261,9 @@ async function saveOrder(){
   const nr=document.getElementById('f-nr').value.trim();
   if(!nr){toast('Bitte Frachtbrief-Nr. eingeben','err');document.getElementById('f-nr').focus();return}
   const g=id=>document.getElementById(id)?.value||'';
-  const data={nr,status:'open',
-    author:g('f-author'),vehicle:g('f-vehicle'),chassis:g('f-chassis'),
-    s1von:g('f-s1-von'),s1bis:g('f-s1-bis'),s1plan:g('f-s1-plan'),
-    s1name:g('f-s1-name'),s1addr:g('f-s1-addr'),s1zip:g('f-s1-zip'),s1city:g('f-s1-city'),
-    s1reederei:g('f-s1-reederei'),s1hafen:g('f-s1-hafen'),s1schiff:g('f-s1-schiff'),s1ref:g('f-s1-ref'),s1zoll:g('f-s1-zoll'),
-    s2von:g('f-s2-von'),s2bis:g('f-s2-bis'),s2plan:g('f-s2-plan'),
-    s2name:g('f-s2-name'),s2addr:g('f-s2-addr'),s2zip:g('f-s2-zip'),s2city:g('f-s2-city'),
-    s2ref:g('f-s2-ref'),s2hafen:g('f-s2-hafen'),s2schiff:g('f-s2-schiff'),
-    s3plan:g('f-s3-plan'),s3name:g('f-s3-name'),s3addr:g('f-s3-addr'),s3zip:g('f-s3-zip'),s3city:g('f-s3-city'),
-    s3reederei:g('f-s3-reederei'),s3ref:g('f-s3-ref'),s3zoll:g('f-s3-zoll'),
-    remarks:g('f-remarks'),showPrice:document.getElementById('f-showPrice').checked,
-    containers:collectContainers()};
+  let data={nr,status:'open',author:g('f-author'),vehicle:g('f-vehicle'),chassis:g('f-chassis'),
+    remarks:g('f-remarks'),showPrice:document.getElementById('f-showPrice').checked,containers:collectContainers()};
+  data=stationsToOrder(data);
   const result=cOrderId?await api('/api/orders/'+cOrderId,'PUT',data):await api('/api/orders','POST',data);
   closeModal('mo-order');await loadAll();toast('Auftrag '+result.nr+' gespeichert ✓');
 }
@@ -1963,7 +1986,11 @@ function renderInquiries(){
       <td style="font-size:11px">${[i.origin,i.destination].filter(Boolean).join(' → ')||'–'}</td>
       <td>${i.quantity||'–'}</td>
       <td>${i.deliveryDate?i.deliveryDate.split('-').reverse().join('.'):'–'}</td>
-      <td><span class="badge badge-inq-${i.status||'new'}">${INQ_STATUS_LABELS[i.status]||i.status}</span></td>
+      <td>
+        <div style="position:relative;display:inline-block">
+          <span class="badge badge-inq-${i.status||'new'}" style="cursor:pointer" onclick="toggleInqStatusMenu('${i.id}',this)">${INQ_STATUS_LABELS[i.status]||i.status} ▾</span>
+        </div>
+      </td>
       <td style="max-width:140px;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${i.notes||''}">${i.notes||'–'}</td>
       <td><div class="acts">
         <button class="btn btn-sm" onclick="editInquiry('${i.id}')">✏</button>
@@ -2074,6 +2101,29 @@ function fillInqCust(cid){
   document.getElementById('inq-contact').value=c.contact||'';
   document.getElementById('inq-email').value=c.email||'';
   document.getElementById('inq-phone').value=c.phone||'';
+}
+
+// ── INQUIRY STATUS QUICK CHANGE ────────────────────────
+let _inqStatusMenu=null;
+function toggleInqStatusMenu(id,el){
+  if(_inqStatusMenu){_inqStatusMenu.remove();_inqStatusMenu=null;return}
+  const menu=document.createElement('div');
+  menu.style.cssText='position:fixed;background:white;border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:500;min-width:180px;overflow:hidden;padding:4px';
+  const r=el.getBoundingClientRect();
+  menu.style.top=(r.bottom+4)+'px';menu.style.left=r.left+'px';
+  menu.innerHTML=Object.entries(INQ_STATUS_LABELS).map(([k,v])=>`
+    <div onclick="setInqStatus('${id}','${k}')" style="padding:8px 12px;cursor:pointer;font-size:12px;border-radius:5px;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='#f9f8f6'" onmouseout="this.style.background=''">
+      <span class="badge badge-inq-${k}" style="pointer-events:none">${v}</span>
+    </div>`).join('');
+  document.body.appendChild(menu);
+  _inqStatusMenu=menu;
+  setTimeout(()=>document.addEventListener('click',()=>{menu.remove();_inqStatusMenu=null},{once:true}),50);
+}
+async function setInqStatus(id,status){
+  if(_inqStatusMenu){_inqStatusMenu.remove();_inqStatusMenu=null}
+  const inq=inquiries.find(x=>x.id===id);if(!inq)return;
+  await api('/api/inquiries/'+id,'PUT',{...inq,status});
+  await loadAll();toast('Status aktualisiert ✓');
 }
 
 // ── AUTH & USER ─────────────────────────────────────────
