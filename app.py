@@ -1344,6 +1344,34 @@ def import_dispo_csv():
     except Exception as e:
         return jsonify({'ok': False, 'message': str(e)}), 500
 
+
+# ── Tagespauschalen je Fahrzeug (Dispo-Statistik) ──
+@app.route('/api/dispo/rates', methods=['GET'])
+@login_required
+def get_dispo_rates():
+    return jsonify(load_db().get('dispo_rates', {}))
+
+@app.route('/api/dispo/rates', methods=['POST'])
+@login_required
+def set_dispo_rates():
+    import re as _re
+    data = request.json or {}
+    veh = str(data.get('vehicle', '')).strip()
+    entries = data.get('entries') or {}
+    if not veh or not isinstance(entries, dict):
+        return jsonify({'ok': False, 'message': 'Fahrzeug fehlt'}), 400
+    db = load_db(); rates = db.setdefault('dispo_rates', {}); vr = rates.setdefault(veh, {})
+    for day, val in entries.items():
+        if not _re.match(r'^\d{4}-\d{2}-\d{2}$', str(day)): continue
+        if val is None or str(val).strip() == '':
+            vr.pop(day, None)
+        else:
+            try: vr[day] = round(float(str(val).replace(',', '.')), 2)
+            except ValueError: pass
+    if not vr: rates.pop(veh, None)
+    save_db(db)
+    return jsonify({'ok': True, 'rates': rates})
+
 # ── Dispo PDFs (Querformat, Felder per Einstellung) ───────
 from xml.sax.saxutils import escape as _xesc
 _DARK = colors.HexColor('#1a2e4a'); _BLUE = colors.HexColor('#2563a8')
