@@ -121,12 +121,10 @@ def load_config():
         'company_name':'Lagonis Logistics','company_address':'','company_zip':'',
         'company_city':'','company_phone':'','company_email':'','company_web':'',
         'bank_iban':'','bank_bic':'','bank_name':'',
-        'reminder_days':14,'dunning_days':30,
-        'default_payment_days':14,'default_payment_text':'Zahlbar innerhalb 14 Tagen netto',
-        'default_author':'','default_vat':19,
-        'order_prefix':'LL-TA','invoice_prefix':'RE','inquiry_prefix':'ANF',
-        'show_price_default':False,'auto_invoice_from_order':True,
-        'order_counter_override':0,'invoice_counter_override':0,
+        'default_author':'',
+        'order_prefix':'LL-TA','inquiry_prefix':'ANF','customer_prefix':'KD',
+        'show_price_default':False,
+        'order_counter_override':0,
     }
     if os.path.exists(CONFIG_FILE):
         try:
@@ -317,16 +315,65 @@ def test_smtp():
     return jsonify(result), status
 
 # ── Customers ─────────────────────────────────────────────
+def _cust_prefix():
+    p = load_config().get('customer_prefix')
+    return 'KD' if p is None else str(p).strip()
+
+def _fmt_cust_nr(n):
+    p = _cust_prefix()
+    return f"{p}-{str(n).zfill(4)}" if p else str(n).zfill(4)
+
+def _next_cust_nr(db, take=True):
+    import re as _re
+    c = db.get('customer_counter')
+    if not c:
+        mx = 0
+        for x in db.get('customers', []):
+            m = _re.search(r'(\d+)\s*$', str(x.get('kdnr') or ''))
+            if m: mx = max(mx, int(m.group(1)))
+        c = mx + 1
+    if take: db['customer_counter'] = c + 1
+    return _fmt_cust_nr(c)
+
+def _ensure_cust_nrs(db):
+    """Bestandskunden ohne Kundennummer bekommen fortlaufend eine (nach Anlagedatum)."""
+    miss = [c for c in db['customers'] if not c.get('kdnr')]
+    if not miss: return False
+    for c in sorted(miss, key=lambda x: x.get('createdAt') or ''):
+        c['kdnr'] = _next_cust_nr(db)
+    return True
+
 @app.route('/api/customers', methods=['GET'])
 @login_required
-def get_customers(): return jsonify(load_db()['customers'])
+def get_customers():
+    db = load_db()
+    if _ensure_cust_nrs(db): save_db(db)
+    return jsonify(db['customers'])
+
+@app.route('/api/customers/next-nr', methods=['GET'])
+@login_required
+def next_customer_nr():
+    db = load_db(); _ensure_cust_nrs(db)
+    return jsonify({'nr': _next_cust_nr(db, take=False)})
+
+@app.route('/api/customers/set-counter', methods=['POST'])
+@login_required
+@admin_required
+def set_customer_counter():
+    db = load_db()
+    try: val = max(1, int((request.json or {}).get('counter', 1)))
+    except Exception: return jsonify({'ok': False, 'message': 'Ungültige Zahl'}), 400
+    _ensure_cust_nrs(db); db['customer_counter'] = val; save_db(db)
+    return jsonify({'ok': True, 'counter': val})
 
 @app.route('/api/customers', methods=['POST'])
 @login_required
 def create_customer():
     db = load_db(); c = request.json
+    _ensure_cust_nrs(db)
     c['id'] = str(uuid.uuid4()); c['createdAt'] = datetime.now().isoformat()
     c['createdBy'] = current_user()['username']
+    c['kdnr'] = _next_cust_nr(db)
     db['customers'].append(c); save_db(db); return jsonify(c), 201
 
 @app.route('/api/customers/<cid>', methods=['PUT'])
@@ -337,6 +384,7 @@ def update_customer(cid):
         if c['id'] == cid:
             upd = request.json; upd['id'] = cid; upd['createdAt'] = c.get('createdAt','')
             upd['createdBy'] = c.get('createdBy','')
+            upd['kdnr'] = c.get('kdnr') or _next_cust_nr(db)
             upd['updatedBy'] = current_user()['username']
             db['customers'][i] = upd; save_db(db); return jsonify(upd)
     return jsonify({'error':'not found'}), 404
@@ -592,32 +640,46 @@ def delete_inquiry(iid):
     return jsonify({'ok': True})
 
 # ── Email ─────────────────────────────────────────────────
+def _smtp_provider(host):
+    h = (host or '').lower()
+    if 'gmail' in h or 'googlemail' in h: return 'gmail'
+    if 'office365' in h or 'outlook' in h or 'hotmail' in h or 'live.com' in h: return 'microsoft'
+    return ''
+
 def _smtp_connect(cfg):
-    host = cfg.get('smtp_host','')
-    if not host: raise ValueError('SMTP-Host nicht konfiguriert. Bitte Einstellungen prüfen.')
-    port = int(cfg.get('smtp_port', 587))
+    import ssl
+    host = (cfg.get('smtp_host') or '').strip()
+    if not host: raise ValueError('SMTP-Host nicht konfiguriert. Bitte unter ⚙ Einstellungen → E-Mail / SMTP eintragen.')
+    try: port = int(cfg.get('smtp_port') or 587)
+    except Exception: port = 587
     use_ssl = cfg.get('smtp_ssl', False)
+    prov = _smtp_provider(host)
+    u = (cfg.get('smtp_user') or '').strip(); p = cfg.get('smtp_pass') or ''
+    ctx = ssl.create_default_context()
+    srv = None
     try:
         if use_ssl or port == 465:
-            srv = smtplib.SMTP_SSL(host, port, timeout=15)
-            srv.ehlo()
+            srv = smtplib.SMTP_SSL(host, port, timeout=20, context=ctx); srv.ehlo()
         else:
-            srv = smtplib.SMTP(host, port, timeout=15)
-            srv.ehlo()
-            try:
-                srv.starttls()
-                srv.ehlo()
-            except Exception:
-                pass  # Some servers don't support STARTTLS
-        u = cfg.get('smtp_user','')
-        p = cfg.get('smtp_pass','')
-        if u and p:
-            srv.login(u, p)
+            srv = smtplib.SMTP(host, port, timeout=20); srv.ehlo()
+            if srv.has_extn('starttls'):
+                srv.starttls(context=ctx); srv.ehlo()
+            elif u and p:
+                raise ValueError('Der Mail-Server bietet keine verschlüsselte Verbindung (STARTTLS) an – Zugangsdaten werden nicht unverschlüsselt gesendet.')
+        if u and p: srv.login(u, p)
         return srv
-    except smtplib.SMTPAuthenticationError:
-        raise ValueError('Authentifizierung fehlgeschlagen. Benutzername/Passwort prüfen.')
-    except smtplib.SMTPConnectError:
-        raise ValueError(f'Verbindung zu {host}:{port} fehlgeschlagen.')
+    except smtplib.SMTPAuthenticationError as e:
+        try: srv and srv.close()
+        except Exception: pass
+        if prov == 'gmail':
+            raise ValueError('Gmail hat die Anmeldung abgelehnt. Bitte ein App-Passwort verwenden (Google-Konto → Sicherheit → 2-Schritt-Verifizierung → App-Passwörter) – das normale Passwort funktioniert nicht. Benutzername = vollständige Gmail-Adresse.')
+        if prov == 'microsoft':
+            raise ValueError('Microsoft hat die Anmeldung abgelehnt. Bei Microsoft 365 muss „Authentifiziertes SMTP“ für das Postfach aktiviert sein (Admin-Center → Benutzer → E-Mail → E-Mail-Apps verwalten). Bei privaten Outlook.com-Konten ein App-Passwort verwenden und Host smtp-mail.outlook.com eintragen.')
+        raise ValueError('Anmeldung fehlgeschlagen. Benutzername (meist die komplette E-Mail-Adresse) und Passwort prüfen.')
+    except ValueError:
+        raise
+    except (smtplib.SMTPConnectError, OSError) as e:
+        raise ValueError(f'Verbindung zu {host}:{port} fehlgeschlagen ({e}). Host/Port prüfen (587 = STARTTLS, 465 = SSL).')
     except Exception as e:
         raise ValueError(f'SMTP-Fehler: {str(e)}')
 
@@ -988,6 +1050,7 @@ DISPO_FIELDS = [
     ('slot_aufnahme', 'Slot Aufnahme', 'stationen'),
     ('tourenplan_aufnahme', 'Tourenplan Aufnahme', 'stationen'),
     ('gestellung', 'Gestellung', 'stationen'),
+    ('gestellung_adresse', 'Adresse Gestellung', 'stationen'),
     ('slot_gestellung', 'Slot/Zeit Gestellung', 'stationen'),
     ('ref_gestellung', 'Referenz Gestellung', 'stationen'),
     ('leerdepot', 'Leerdepot', 'stationen'),
@@ -1008,7 +1071,7 @@ DISPO_LABEL = {f[0]: f[1] for f in DISPO_FIELDS}
 DISPO_PDF_DEFAULT = [k for k in DISPO_KEYS if k not in ('nr', 'einkaufspreis', 'verkaufspreis')]
 DISPO_STATUS = {'offen': 'Offen', 'in_fahrt': 'In Fahrt', 'erledigt': 'Erledigt', 'storniert': 'Storniert'}
 DISPO_BULK_FIELDS = [k for k in DISPO_KEYS if k not in ('nr', 'container_extra')]
-NEW_FIELDS_V3 = ['container_extra']   # Felder, die ältere gespeicherte Einstellungen noch nicht kennen
+NEW_FIELDS = {'container_extra': 3, 'gestellung_adresse': 4}   # Feld -> Version, ab der es bekannt ist (ältere Einstellungen bekommen es automatisch)
 
 def _extras(d):
     """Weitere Container als [(nr, typ)] – akzeptiert Liste oder CSV-Text 'NR:TYP | NR:TYP'"""
@@ -1208,7 +1271,8 @@ def _pdf_sel(cfg):
     s = (cfg or {}).get('dispo_pdf_fields')
     if not isinstance(s, list): return set(DISPO_PDF_DEFAULT)
     s = set(s)
-    if int((cfg or {}).get('dispo_fields_v') or 0) < 3: s |= set(NEW_FIELDS_V3)
+    v = int((cfg or {}).get('dispo_fields_v') or 0)
+    s |= {k for k, nv in NEW_FIELDS.items() if v < nv}
     return s
 
 def _e(v): return _xesc(str(v)) if v not in (None, '') else ''
@@ -1233,7 +1297,7 @@ def _styles():
 def _hdr(story, s, W, cfg):
     left = ''
     if os.path.exists(LOGO_PATH):
-        try: left = Image(LOGO_PATH, width=50*mm, height=19*mm, kind='proportional', hAlign='LEFT')
+        try: left = Image(LOGO_PATH, width=72*mm, height=28*mm, kind='proportional', hAlign='LEFT')
         except: left = ''
     lines = ['<b>' + _e(cfg.get('company_name', 'Lagonis Logistics')) + '</b>']
     city = ' '.join(filter(None, [cfg.get('company_zip', ''), cfg.get('company_city', '')]))
@@ -1256,6 +1320,7 @@ def _foot(cfg, label):
 def _station_html(d, sel, key, extras):
     lines = []
     if key in sel and d.get(key): lines.append('<b>' + _e(d[key]) + '</b>')
+    if key == 'gestellung' and 'gestellung_adresse' in sel and d.get('gestellung_adresse'): lines.append('<font color="#475569">' + _e(d['gestellung_adresse']) + '</font>')
     for k, pre in extras:
         if k in sel and d.get(k): lines.append(f'<font color="#475569">{pre}:</font> {_e(d[k])}')
     return '<br/>'.join(lines) or '-'
@@ -1284,7 +1349,7 @@ def _plan_columns(sel):
     if sel & {'container_nr', 'container_typ', 'anzahl_container', 'container_extra'}:
         c.append(('container', 'Container', 3.3, 'container', lambda d: _container_html(d, sel)))
     for key, name, extras in STATIONS:
-        if key in sel or any(k in sel for k, _ in extras):
+        if key in sel or any(k in sel for k, _ in extras) or (key == 'gestellung' and 'gestellung_adresse' in sel):
             c.append((key, name, 3.6, 'stationen', lambda d, key=key, extras=extras: _station_html(d, sel, key, extras)))
     simple('slot_gebucht', 1.6, lambda d: 'Ja' if str(d.get('slot_gebucht', '')).lower() in ('ja', 'true', '1') else 'Nein')
     simple('reederei', 1.8); simple('status', 1.5, lambda d: _e(DISPO_STATUS.get(d.get('status'), d.get('status'))) or '-')
@@ -1352,8 +1417,9 @@ def _grid(cells, W, g, s, ncols=6):
 def _order_story(d, cfg, s, W):
     sel = _pdf_sel(cfg); story = []
     _hdr(story, s, W, cfg)
-    story += [Paragraph('Transportauftrag / Frachtbrief', s['h3']), Paragraph(_e(d.get('nr')), s['h1'])]
-    if 'auftragsnr' in sel and d.get('auftragsnr'): story.append(Paragraph(f"Auftragsnummer: <b>{_e(d.get('auftragsnr'))}</b>", s['body']))
+    an = d.get('auftragsnr') if 'auftragsnr' in sel else ''
+    story += [Paragraph('Transportauftrag / Frachtbrief', s['h3']), Paragraph(_e(an or d.get('nr')), s['h1'])]
+    if an: story.append(Paragraph(f"Dispo-Nr.: <b>{_e(d.get('nr'))}</b>", s['body']))
     story.append(Spacer(1, 6))
     def add(g, cells, ncols=3):
         if cells: story.extend([_section(_GN[g], g, W, s), _grid(cells, W, g, s, ncols), Spacer(1, 6)])
@@ -1365,7 +1431,7 @@ def _order_story(d, cfg, s, W):
             v = _fd(d.get(k)) if k in ('lieferdatum', 'datum') else (_e(DISPO_STATUS.get(d.get('status'), d.get('status'))) or '-') if k == 'status' else None
             termine.append(F(k, v))
     add('termine', termine)
-    blocks = [(name, _station_html(d, sel, key, extras)) for key, name, extras in STATIONS if key in sel or any(k in sel for k, _ in extras)]
+    blocks = [(name, _station_html(d, sel, key, extras)) for key, name, extras in STATIONS if key in sel or any(k in sel for k, _ in extras) or (key == 'gestellung' and 'gestellung_adresse' in sel)]
     add('stationen', blocks)
     cont = [F(k) for k in ('container_nr', 'container_typ', 'anzahl_container', 'reederei') if k in sel]
     if 'slot_gebucht' in sel: cont.append(F('slot_gebucht', yn(d.get('slot_gebucht', ''))))
@@ -1407,16 +1473,15 @@ def dispo_bulk_pdf():
     if not sel: return jsonify({'error': 'keine Auswahl'}), 400
     return _pdf_resp(_gen_orders_pdf(sel, load_config()), f"Transportauftraege_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf")
 
-@app.route('/api/dispo/tagesplan-pdf', methods=['POST'])
-@login_required
-def tagesplan_pdf():
-    data = request.json or {}; dispos = load_db().get('dispo', []); cfg = load_config()
+def _plan_build(data):
+    """Tagesplan nach Datenlage bauen -> (pdf_bytes, dateiname, anzahl_auftraege)"""
+    dispos = load_db().get('dispo', []); cfg = load_config()
     ids = data.get('ids') or []
     if ids:
         sel = [d for d in dispos if d['id'] in set(ids)]
         days = sorted({(d.get('lieferdatum') or '')[:10] for d in sel if d.get('lieferdatum')})
         sub = 'Auswahl' + (f' · {_fd(days[0])}' + (f' – {_fd(days[-1])}' if len(days) > 1 else '') if days else '')
-        return _pdf_resp(_gen_tagesplan_pdf(sel, cfg, 'Tagesplan', sub, len(days) > 1), f"Tagesplan_Auswahl_{datetime.now().strftime('%Y%m%d')}.pdf")
+        return _gen_tagesplan_pdf(sel, cfg, 'Tagesplan', sub, len(days) > 1), f"Tagesplan_Auswahl_{datetime.now().strftime('%Y%m%d')}.pdf", len(sel)
     fr = data.get('from') or data.get('date') or datetime.now().strftime('%Y-%m-%d')
     to = data.get('to') or data.get('date') or fr
     if to < fr: fr, to = to, fr
@@ -1424,11 +1489,133 @@ def tagesplan_pdf():
     sel = [d for d in dispos if fr <= (d.get('lieferdatum') or '')[:10] <= to and d.get('lieferdatum')   # strikt nach Lieferdatum
            and (not veh or (d.get('fahrzeug_nr') or '') == veh)]
     vs = f' · Fahrzeug {veh}' if veh else ''; vf = f'_{sanitize(veh)}' if veh else ''
-    multi = fr != to
-    if multi: return _pdf_resp(_gen_tagesplan_pdf(sel, cfg, 'Tagesplan Zeitraum', f'{_fd(fr)} – {_fd(to)}{vs}', True), f'Tagesplan_{fr}_bis_{to}{vf}.pdf')
+    if fr != to:
+        return _gen_tagesplan_pdf(sel, cfg, 'Tagesplan Zeitraum', f'{_fd(fr)} – {_fd(to)}{vs}', True), f'Tagesplan_{fr}_bis_{to}{vf}.pdf', len(sel)
     try: sub = f"{_WD[datetime.strptime(fr, '%Y-%m-%d').weekday()]}, {_fd(fr)}"
     except: sub = _fd(fr)
-    return _pdf_resp(_gen_tagesplan_pdf(sel, cfg, 'Tagesplan', sub + vs, False), f'Tagesplan_{fr}{vf}.pdf')
+    return _gen_tagesplan_pdf(sel, cfg, 'Tagesplan', sub + vs, False), f'Tagesplan_{fr}{vf}.pdf', len(sel)
+
+@app.route('/api/dispo/tagesplan-pdf', methods=['POST'])
+@login_required
+def tagesplan_pdf():
+    pdf, name, _n = _plan_build(request.json or {})
+    return _pdf_resp(pdf, name)
+
+# ── E-Mail-Versand aus der Dispo (Tagesplan / Aufträge) ───
+import re as _re_mail
+from email.message import EmailMessage as _EmailMessage
+from email.utils import formatdate as _fdate, make_msgid as _mkid, formataddr as _fmtaddr
+
+def _mail_files(data):
+    """Anhänge je nach Art bauen -> ([(dateiname, bytes)], anzahl_auftraege)"""
+    cfg = load_config(); kind = data.get('kind') or 'plan'
+    if kind == 'plan':
+        pdf, name, n = _plan_build(data)
+        if n == 0: raise ValueError('Für diese Auswahl gibt es keine Aufträge (Tagesplan richtet sich nach dem Lieferdatum).')
+        return [('HG_' + name, pdf)], n
+    ids = set(data.get('ids') or [])
+    sel = sorted([d for d in load_db().get('dispo', []) if d['id'] in ids], key=_plan_sort)
+    if not sel: raise ValueError('Bitte mindestens einen Auftrag auswählen.')
+    if data.get('merge') and len(sel) > 1:
+        return [(f"HG_Transportauftraege_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf", _gen_orders_pdf(sel, cfg))], len(sel)
+    files, used = [], set()
+    for d in sel:
+        nm = f"HG_Transportauftrag_{sanitize(d.get('auftragsnr') or d.get('nr', ''))}.pdf"
+        if nm in used: nm = nm[:-4] + '_' + sanitize(d.get('nr', '')) + '.pdf'
+        used.add(nm); files.append((nm, _gen_orders_pdf([d], cfg)))
+    return files, len(sel)
+
+def _split_addrs(txt):
+    out = []
+    for a in _re_mail.split(r'[;,\s]+', txt or ''):
+        a = a.strip().strip('<>')
+        if a: out.append(a)
+    return out
+
+_MAIL_RE = _re_mail.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]{2,}$')
+
+def _mail_build(data, files, unsent=False):
+    cfg = load_config()
+    to = _split_addrs(data.get('recipients')); cc = _split_addrs(data.get('cc'))
+    bad = [a for a in to + cc if not _MAIL_RE.match(a)]
+    if bad: raise ValueError('Ungültige E-Mail-Adresse: ' + ', '.join(bad))
+    if not to and not unsent: raise ValueError('Bitte mindestens einen Empfänger angeben.')
+    fe = (cfg.get('from_email') or cfg.get('smtp_user') or '').strip()
+    if _smtp_provider(cfg.get('smtp_host')) and '@' in (cfg.get('smtp_user') or ''):
+        fe = cfg['smtp_user'].strip()      # Gmail/Microsoft erlauben nur die angemeldete Adresse als Absender
+    fn = cfg.get('from_name') or cfg.get('company_name') or ''
+    m = _EmailMessage()
+    if fe: m['From'] = _fmtaddr((fn, fe))
+    if to: m['To'] = ', '.join(to)
+    if cc: m['Cc'] = ', '.join(cc)
+    m['Subject'] = (data.get('subject') or '').strip() or 'Dispo'
+    m['Date'] = _fdate(localtime=True)
+    m['Message-ID'] = _mkid(domain=(fe.split('@')[-1] if '@' in fe else None))
+    if unsent: m['X-Unsent'] = '1'          # Outlook öffnet die .eml als bearbeitbaren Entwurf
+    m.set_content((data.get('body') or '').replace('\r\n', '\n'))
+    for nm, pdf in files: m.add_attachment(pdf, maintype='application', subtype='pdf', filename=nm)
+    return m, fe, to + cc
+
+@app.route('/api/dispo/email/prepare', methods=['POST'])
+@login_required
+def dispo_mail_prepare():
+    try:
+        files, n = _mail_files(request.json or {})
+        return jsonify({'ok': True, 'count': n, 'files': [{'name': nm, 'kb': round(len(b) / 1024)} for nm, b in files]})
+    except Exception as e: return jsonify({'ok': False, 'message': str(e)}), 400
+
+@app.route('/api/dispo/email/send', methods=['POST'])
+@login_required
+def dispo_mail_send():
+    data = request.json or {}
+    try:
+        files, n = _mail_files(data)
+        msg, fe, rcpts = _mail_build(data, files)
+        cfg = load_config()
+        if not fe: raise ValueError('Absender-E-Mail fehlt (⚙ Einstellungen → E-Mail / SMTP).')
+        srv = _smtp_connect(cfg)
+        try: srv.send_message(msg, from_addr=fe, to_addrs=rcpts)
+        except smtplib.SMTPSenderRefused: raise ValueError('Der Server hat den Absender abgelehnt. Absender-E-Mail muss zur SMTP-Anmeldung passen.')
+        except smtplib.SMTPRecipientsRefused: raise ValueError('Der Server hat den/die Empfänger abgelehnt.')
+        finally:
+            try: srv.quit()
+            except Exception: pass
+        db = load_db(); log = db.setdefault('dispo_mail_log', [])
+        log.insert(0, {'at': datetime.now().isoformat(timespec='seconds'), 'by': current_user()['username'], 'to': ', '.join(_split_addrs(data.get('recipients'))),
+                       'subject': msg['Subject'], 'files': [nm for nm, _ in files], 'kind': data.get('kind') or 'plan'})
+        del log[50:]; save_db(db)
+        return jsonify({'ok': True, 'files': [nm for nm, _ in files]})
+    except Exception as e: return jsonify({'ok': False, 'message': str(e)}), 400
+
+@app.route('/api/dispo/email/eml', methods=['POST'])
+@login_required
+def dispo_mail_eml():
+    data = request.json or {}
+    try:
+        files, n = _mail_files(data); msg, _fe, _r = _mail_build(data, files, unsent=True)
+        return send_file(io.BytesIO(msg.as_bytes()), mimetype='message/rfc822', as_attachment=True,
+                         download_name=f"HG_E-Mail_Entwurf_{datetime.now().strftime('%Y%m%d_%H%M')}.eml")
+    except Exception as e: return jsonify({'ok': False, 'message': str(e)}), 400
+
+@app.route('/api/dispo/email/attachments', methods=['POST'])
+@login_required
+def dispo_mail_attachments():
+    """Anhänge zum Herunterladen (1 Datei = PDF, mehrere = ZIP) – z. B. für Gmail/Outlook im Browser"""
+    try:
+        files, n = _mail_files(request.json or {})
+        if len(files) == 1:
+            return send_file(io.BytesIO(files[0][1]), mimetype='application/pdf', as_attachment=True, download_name=files[0][0])
+        z = io.BytesIO()
+        with zipfile.ZipFile(z, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for nm, b in files: zf.writestr(nm, b)
+        z.seek(0)
+        return send_file(z, mimetype='application/zip', as_attachment=True, download_name=f"HG_Anhaenge_{datetime.now().strftime('%Y%m%d_%H%M')}.zip")
+    except Exception as e: return jsonify({'ok': False, 'message': str(e)}), 400
+
+@app.route('/api/dispo/email/log', methods=['GET'])
+@login_required
+def dispo_mail_log():
+    return jsonify(load_db().get('dispo_mail_log', [])[:15])
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
