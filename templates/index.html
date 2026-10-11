@@ -420,6 +420,31 @@ table.dp td.c0:last-child{overflow:visible}
 .ml-outlook{background:linear-gradient(135deg,#1d4ed8,#3b82f6)!important;color:#fff!important;border-color:#1d4ed8!important;font-weight:700;padding:9px 18px;margin-bottom:6px}
 #ac-plz .ac-item.on{background:var(--blue-bg)}
 
+.dp-newrow{display:flex;justify-content:center;margin:2px 0 16px}
+.dp-newbtn{font:inherit;font-size:17px;font-weight:700;letter-spacing:.02em;color:#fff;cursor:pointer;padding:15px 44px;border:0;border-radius:14px;background:linear-gradient(135deg,#0e7490,#0891b2);box-shadow:0 6px 18px rgba(8,145,178,.35),0 1px 0 rgba(255,255,255,.25) inset;transition:transform .12s,box-shadow .12s,filter .12s}
+.dp-newbtn:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(8,145,178,.45),0 1px 0 rgba(255,255,255,.25) inset;filter:brightness(1.06)}
+.dp-newbtn:active{transform:translateY(0);box-shadow:0 3px 10px rgba(8,145,178,.35)}
+
+.ds-hint{font-size:11px;color:var(--text3);padding:0 16px 8px}
+.ds-wrap{overflow:auto;max-height:560px;border-top:1px solid var(--border,#e5e7eb)}
+.ds-t{border-collapse:separate;border-spacing:0;font-size:12px;width:max-content;min-width:100%}
+.ds-t th,.ds-t td{padding:5px 8px;border-bottom:1px solid #eef0f3;text-align:center;white-space:nowrap}
+.ds-t td.r,.ds-t th.r{text-align:right}
+.ds-t thead th{position:sticky !important;top:0;background:#f8fafc;z-index:2;font-size:11px;color:#475569;font-weight:600}
+.ds-t thead tr:nth-child(2) th{top:29px}
+.ds-t .ds-d{position:sticky !important;left:0;background:#fff;text-align:left;z-index:1;border-right:1px solid #e2e8f0;min-width:92px}
+.ds-t thead .ds-d{z-index:3;background:#f8fafc}
+.ds-t .vb{border-left:2px solid #cbd5e1}
+.ds-t thead th.vc0{color:#0e7490}.ds-t thead th.vc1{color:#7c3aed}.ds-t thead th.vc2{color:#b45309}.ds-t thead th.vc3{color:#15803d}
+.ds-t tr.we td{background:#f8fafc}.ds-t tr.we td.ds-d{background:#f1f5f9}
+.ds-t tr.td td{background:#ecfeff}.ds-t tr.td td.ds-d{background:#cffafe}
+.ds-t tfoot td{position:sticky;bottom:0;background:#eef2f7;font-weight:700;z-index:1}
+.ds-rate{width:78px;text-align:right;padding:4px 6px;border:1px solid #d5dbe3;border-radius:6px;font:inherit;background:#fff}
+.ds-rate:focus{outline:2px solid #06b6d4;border-color:#06b6d4}
+.ds-fill{border:0;background:#e0f2fe;color:#0369a1;border-radius:5px;cursor:pointer;font-size:12px;padding:1px 6px;margin-left:4px}
+.ds-fill:hover{background:#bae6fd}
+.ds-sum td{font-weight:700;background:#f1f5f9}
+
 </style>
 </head>
 <body>
@@ -616,9 +641,9 @@ table.dp td.c0:last-child{overflow:visible}
         <button class="btn btn-amber" onclick="dispoTagesplan()">📋 Tagesplan PDF</button>
         <button class="btn btn-sm" onclick="mailFromPlan()" title="Diesen Tagesplan per E-Mail versenden">✉</button>
       </div>
-      <button class="btn btn-dark" onclick="dispoOpen()">＋ Neuer Auftrag</button>
     </div>
   </div>
+  <div class="dp-newrow"><button class="dp-newbtn" onclick="dispoOpen()">＋ Neuer Auftrag</button></div>
   <div class="dp-cols" id="dp-cols" onclick="event.stopPropagation()"></div>
   <div class="dp-kpis" id="dp-kpis"></div>
   <div class="dp-bar">
@@ -661,11 +686,19 @@ table.dp td.c0:last-child{overflow:visible}
       <label>von</label><input type="date" id="ds-from" onchange="dispoStatsRender()"><label>bis</label><input type="date" id="ds-to" onchange="dispoStatsRender()">
     </div></div>
   <div class="dp-kpis" id="ds-kpis"></div>
-  <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px">
-    <div class="card"><div class="ch"><div class="ct">Tagesumsatz &amp; Marge</div></div><div style="height:280px"><canvas id="ds-chart-day"></canvas></div></div>
-    <div class="card"><div class="ch"><div class="ct">Status</div></div><div style="height:280px"><canvas id="ds-chart-status"></canvas></div></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch" style="flex-wrap:wrap;gap:8px"><div class="ct">Tagesübersicht je Fahrzeug · 30 Tage</div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-sm btn-ghost" onclick="dsShift(-30)">‹ 30 Tage zurück</button>
+        <label style="font-size:11px;color:var(--text3)">ab</label><input type="date" id="ds-start" onchange="dsDaily()">
+        <button class="btn btn-sm btn-ghost" onclick="dsShift(30)">30 Tage vor ›</button>
+        <button class="btn btn-sm btn-ghost" onclick="dsToday()">Letzte 30 Tage</button>
+      </div></div>
+    <div class="ds-hint">Tagespauschale = Kosten des Fahrzeugs pro Tag (hier eintragen, wird automatisch gespeichert). Marge = Umsatz − Einkauf − Tagespauschale. ⤓ trägt eine Pauschale in alle leeren Tage ein.</div>
+    <div class="ds-wrap" id="ds-daily"></div>
   </div>
-  <div class="card"><div class="ch"><div class="ct">Je Fahrzeug</div></div><div class="tw" id="ds-veh"></div></div>
+  <div class="card"><div class="ch"><div class="ct">Je Fahrzeug · Zeitraum von/bis (oben)</div></div><div class="tw" id="ds-veh"></div></div>
+
 </div>
 
 <!-- ═══ E-MAIL ═══ -->
@@ -3184,6 +3217,7 @@ async function dispoLoad(){
   try{const r=await fetch('/api/dispo');dispoData=r.ok?await r.json():[]}catch{dispoData=[]}
   if(!Array.isArray(dispoData))dispoData=[];
   dispoData.forEach(d=>{if(d.status&&!DP_ST[d.status])d.status=dpStNorm(d.status)});
+  await dsLoadRates();
   dpBuildDatalists();dpBulkInit();dispoRender();try{dpDash()}catch(e){}
 }
 function dispoOpen(id){
@@ -3276,24 +3310,87 @@ async function dispoImport(inp){
 }
 
 // ── Statistik (Datum = Lieferdatum, Fallback Datum) ──
-let dsCharts={};
-function dispoStatsRender(){
-  const fr=document.getElementById('ds-from').value,to=document.getElementById('ds-to').value;
-  const l=dispoData.filter(d=>{const x=dpLD(d);return(!fr||x>=fr)&&(!to||x<=to)});
-  const rev=l.reduce((a,d)=>a+dpNum(d.verkaufspreis),0),cost=l.reduce((a,d)=>a+dpNum(d.einkaufspreis),0);
-  const days={};l.forEach(d=>{const k=dpLD(d);if(!k)return;(days[k]=days[k]||{n:0,r:0,c:0});days[k].n++;days[k].r+=dpNum(d.verkaufspreis);days[k].c+=dpNum(d.einkaufspreis)});
-  const dk=Object.keys(days).sort(),avg=dk.length?rev/dk.length:0,cont=l.reduce((a,d)=>a+(parseInt(d.anzahl_container)||1),0);
-  document.getElementById('ds-kpis').innerHTML=[['k-blue',l.length,'Aufträge'],['k-green',eur(rev),'Umsatz'],['k-amber',eur(cost),'Einkauf'],['k-purple',eur(rev-cost),'Marge'+(rev?` (${((rev-cost)/rev*100).toFixed(0)} %)`:'')],['k-teal',eur(avg),'Ø Tagesumsatz · '+cont+' Cont.']].map(([c,v,t])=>`<div class="dp-kpi ${c}"><div class="v">${v}</div><div class="l">${t}</div></div>`).join('');
-  const last=dk.slice(-31);
-  if(window.Chart){
-    Object.values(dsCharts).forEach(c=>c.destroy());
-    dsCharts.day=new Chart(document.getElementById('ds-chart-day'),{type:'bar',data:{labels:last.map(dpDate),datasets:[{label:'Umsatz €',data:last.map(k=>days[k].r),backgroundColor:'#06b6d4',borderRadius:6},{label:'Marge €',type:'line',data:last.map(k=>days[k].r-days[k].c),borderColor:'#7c3aed',backgroundColor:'#7c3aed',tension:.35}]},options:{maintainAspectRatio:false,animation:{duration:900,easing:'easeOutQuart'},plugins:{legend:{position:'bottom'}}}});
-    const sts=dpAllStatus().filter(s=>l.some(d=>(d.status||'offen')===s));
-    dsCharts.st=new Chart(document.getElementById('ds-chart-status'),{type:'doughnut',data:{labels:sts.map(dpStLabel),datasets:[{data:sts.map(s=>l.filter(d=>(d.status||'offen')===s).length),backgroundColor:sts.map(dpStColor),borderWidth:0}]},options:{maintainAspectRatio:false,cutout:'62%',animation:{duration:1000},plugins:{legend:{position:'bottom'}}}});
-  }
-  const v={};l.forEach(d=>{const k=d.fahrzeug_nr||'–';(v[k]=v[k]||{n:0,c:0,r:0,e:0});v[k].n++;v[k].c+=parseInt(d.anzahl_container)||1;v[k].r+=dpNum(d.verkaufspreis);v[k].e+=dpNum(d.einkaufspreis)});
-  document.getElementById('ds-veh').innerHTML='<table><thead><tr><th>Fahrzeug</th><th>Aufträge</th><th>Container</th><th style="text-align:right">Umsatz</th><th style="text-align:right">Marge</th></tr></thead><tbody>'+(Object.entries(v).sort((a,b)=>b[1].r-a[1].r).map(([k,x])=>`<tr><td><strong>${dpEsc(k)}</strong></td><td>${x.n}</td><td>${x.c}</td><td style="text-align:right">${eur(x.r)}</td><td style="text-align:right">${eur(x.r-x.e)}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--text3)">Keine Daten</td></tr>')+'</tbody></table>';
+let dsRates={};
+const dsVeh=()=>(dpCfg.veh&&dpCfg.veh.length)?dpCfg.veh:['LKW1','LKW2','LKW3'];
+const dsAddDays=(iso,n)=>{const[y,m,d]=iso.split('-').map(Number);return dpISO(new Date(y,m-1,d+n))};
+const dsWd=iso=>['So','Mo','Di','Mi','Do','Fr','Sa'][new Date(iso+'T12:00:00').getDay()];
+const dsRate=(v,d)=>dpNum((dsRates[v]||{})[d]);
+const dsMoney=n=>Number(n).toFixed(2).replace('.',',');
+const dsNeg=n=>n<0?' style="color:#dc2626"':'';
+async function dsLoadRates(){try{const r=await fetch('/api/dispo/rates');dsRates=r.ok?await r.json():{}}catch{dsRates={}}if(!dsRates||typeof dsRates!=='object')dsRates={}}
+function dsStart(){const el=document.getElementById('ds-start');if(!el.value)el.value=dsAddDays(dpToday(),-29);return el.value}
+function dsShift(n){const el=document.getElementById('ds-start');el.value=dsAddDays(dsStart(),n);dsDaily()}
+function dsToday(){document.getElementById('ds-start').value=dsAddDays(dpToday(),-29);dsDaily()}
+function dsRange(){return[document.getElementById('ds-from').value,document.getElementById('ds-to').value]}
+function dsInRange(d){const[fr,to]=dsRange();return(!fr||d>=fr)&&(!to||d<=to)}
+// Summen je Fahrzeug im Zeitraum von/bis
+function dsSums(){
+  const l=dispoData.filter(d=>{const x=dpLD(d);return dsInRange(x)});
+  const v={};const get=k=>v[k]=v[k]||{n:0,c:0,r:0,e:0,p:0};
+  dsVeh().forEach(k=>get(k));
+  l.forEach(d=>{const x=get(d.fahrzeug_nr||'–');x.n++;x.c+=parseInt(d.anzahl_container)||1;x.r+=dpNum(d.verkaufspreis);x.e+=dpNum(d.einkaufspreis)});
+  Object.keys(dsRates).forEach(k=>{Object.entries(dsRates[k]).forEach(([day,val])=>{if(dsInRange(day))get(k).p+=dpNum(val)})});
+  return{l,v};
 }
+function dsKpis(){
+  const{l,v}=dsSums();const T=Object.values(v).reduce((a,x)=>({n:a.n+x.n,c:a.c+x.c,r:a.r+x.r,e:a.e+x.e,p:a.p+x.p}),{n:0,c:0,r:0,e:0,p:0});
+  const m=T.r-T.e-T.p;
+  document.getElementById('ds-kpis').innerHTML=[['k-blue',l.length,'Aufträge · '+T.c+' Cont.'],['k-green',eur(T.r),'Umsatz'],['k-amber',eur(T.e),'Einkauf'],['k-teal',eur(T.p),'Tagespauschalen'],['k-purple',eur(m),'Marge'+(T.r?` (${(m/T.r*100).toFixed(0)} %)`:'')]].map(([c,x,t])=>`<div class="dp-kpi ${c}"><div class="v">${x}</div><div class="l">${t}</div></div>`).join('');
+}
+function dsSummary(){
+  const{v}=dsSums();const rows=Object.entries(v).filter(([k,x])=>dsVeh().includes(k)||x.n||x.p).sort((a,b)=>(dsVeh().includes(b[0])-dsVeh().includes(a[0]))||b[1].r-a[1].r);
+  const T=rows.reduce((a,[,x])=>({n:a.n+x.n,c:a.c+x.c,r:a.r+x.r,e:a.e+x.e,p:a.p+x.p}),{n:0,c:0,r:0,e:0,p:0});
+  const R=(x,b)=>`<td style="text-align:right">${eur(x.r)}</td><td style="text-align:right">${eur(x.e)}</td><td style="text-align:right">${eur(x.p)}</td><td style="text-align:right"${dsNeg(x.r-x.e-x.p)}>${b?'<strong>':''}${eur(x.r-x.e-x.p)}${b?'</strong>':''}</td>`;
+  document.getElementById('ds-veh').innerHTML='<table><thead><tr><th>Fahrzeug</th><th>Aufträge</th><th>Container</th><th style="text-align:right">Umsatz</th><th style="text-align:right">Einkauf</th><th style="text-align:right">Tagespauschalen</th><th style="text-align:right">Marge</th></tr></thead><tbody>'+
+    (rows.map(([k,x])=>`<tr><td><strong>${dpEsc(k)}</strong></td><td>${x.n}</td><td>${x.c}</td>${R(x)}</tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text3)">Keine Daten</td></tr>')+
+    `</tbody><tfoot><tr class="ds-sum"><td>Summe</td><td>${T.n}</td><td>${T.c}</td>${R(T,1)}</tr></tfoot></table>`;
+}
+// 30-Tage-Tabelle
+function dsCell(v,day){
+  const l=dispoData.filter(d=>d.fahrzeug_nr===v&&dpLD(d)===day);
+  const r=l.reduce((a,d)=>a+dpNum(d.verkaufspreis),0),e=l.reduce((a,d)=>a+dpNum(d.einkaufspreis),0),c=l.reduce((a,d)=>a+(parseInt(d.anzahl_container)||1),0),p=dsRate(v,day);
+  return{n:l.length,c,r,m:r-e-p,p,has:l.length>0||p!==0};
+}
+function dsDaily(){
+  const start=dsStart(),days=Array.from({length:30},(_,i)=>dsAddDays(start,i)),vs=dsVeh(),today=dpToday();
+  let h1='<tr><th rowspan="2" class="ds-d">Datum</th>',h2='<tr>';
+  vs.forEach((v,i)=>{h1+=`<th colspan="5" class="vb vc${i%4}">${dpEsc(v)} <button class="ds-fill" title="Tagespauschale für alle leeren Tage dieser Tabelle eintragen" onclick="dsFill(${i})">⤓</button></th>`;h2+=`<th class="vb">Tages&shy;pauschale €</th><th>Aufträge</th><th>Cont.</th><th>Umsatz</th><th>Marge</th>`});
+  const body=days.map(day=>{
+    const wd=dsWd(day),cls=(wd==='Sa'||wd==='So'?'we ':'')+(day===today?'td':'');
+    return `<tr class="${cls}"><td class="ds-d"><b>${wd}</b> ${dpDate(day).slice(0,6)}${day.slice(0,4)!==today.slice(0,4)?day.slice(0,4):''}</td>`+vs.map((v,i)=>{
+      const c=dsCell(v,day),raw=(dsRates[v]||{})[day];
+      return `<td class="vb"><input class="ds-rate" inputmode="decimal" placeholder="–" data-v="${dpEsc(v)}" data-d="${day}" value="${raw!==undefined?dsMoney(raw):''}" onchange="dsRateSet(this)"></td><td>${c.n||''}</td><td>${c.c||''}</td><td class="r">${c.r?eur(c.r):''}</td><td class="r" id="dsm-${i}-${day}"${dsNeg(c.m)}>${c.has?eur(c.m):''}</td>`}).join('')+'</tr>';
+  }).join('');
+  document.getElementById('ds-daily').innerHTML=`<table class="ds-t"><thead>${h1}</tr>${h2}</tr></thead><tbody>${body}</tbody><tfoot id="ds-foot"></tfoot></table>`;
+  dsFoot();
+}
+function dsFoot(){
+  const el=document.getElementById('ds-foot');if(!el)return;
+  const start=dsStart(),days=Array.from({length:30},(_,i)=>dsAddDays(start,i));
+  el.innerHTML='<tr class="ds-sum"><td class="ds-d">Summe 30 Tage</td>'+dsVeh().map(v=>{const T=days.reduce((a,d)=>{const c=dsCell(v,d);return{n:a.n+c.n,c:a.c+c.c,r:a.r+c.r,m:a.m+c.m,p:a.p+c.p}},{n:0,c:0,r:0,m:0,p:0});
+    return `<td class="vb r">${eur(T.p)}</td><td>${T.n}</td><td>${T.c}</td><td class="r">${eur(T.r)}</td><td class="r"${dsNeg(T.m)}>${eur(T.m)}</td>`}).join('')+'</tr>';
+}
+async function dsSave(v,entries){
+  const r=await fetch('/api/dispo/rates',{method:'POST',headers:J,body:JSON.stringify({vehicle:v,entries})});const j=await r.json();
+  if(j.ok){dsRates=j.rates||{};return true}toast(j.message||'Speichern fehlgeschlagen','err');return false;
+}
+async function dsRateSet(inp){
+  const v=inp.dataset.v,d=inp.dataset.d,t=inp.value.trim();
+  if(t!==''&&isNaN(parseFloat(t.replace(',','.')))){toast('Bitte eine Zahl eingeben','err');inp.value=(dsRates[v]||{})[d]!==undefined?dsMoney(dsRates[v][d]):'';return}
+  if(!await dsSave(v,{[d]:t===''?null:t}))return;
+  inp.value=(dsRates[v]||{})[d]!==undefined?dsMoney(dsRates[v][d]):'';
+  const i=dsVeh().indexOf(v),c=dsCell(v,d),m=document.getElementById(`dsm-${i}-${d}`);
+  if(m){m.textContent=c.has?eur(c.m):'';m.style.color=c.m<0?'#dc2626':''}
+  dsFoot();dsKpis();dsSummary();
+}
+async function dsFill(i){
+  const v=dsVeh()[i],start=dsStart(),days=Array.from({length:30},(_,k)=>dsAddDays(start,k));
+  const t=prompt(`Tagespauschale in € für ${v}\n(wird in alle leeren Tage von ${dpDate(days[0])} bis ${dpDate(days[29])} eingetragen):`);
+  if(t===null||t.trim()==='')return;if(isNaN(parseFloat(t.replace(',','.')))){toast('Bitte eine Zahl eingeben','err');return}
+  const en={};days.forEach(d=>{if((dsRates[v]||{})[d]===undefined)en[d]=t});
+  if(await dsSave(v,en)){dispoStatsRender();toast('Pauschale eingetragen ✓')}
+}
+function dispoStatsRender(){dsKpis();dsDaily();dsSummary()}
 
 // ── Einstellungen-Tab (Eingabefelder + PDF-Felder) ──
 function dpSettingsInit(){
