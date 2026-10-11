@@ -687,14 +687,15 @@ table.dp td.c0:last-child{overflow:visible}
     </div></div>
   <div class="dp-kpis" id="ds-kpis"></div>
   <div class="card" style="margin-bottom:14px">
-    <div class="ch" style="flex-wrap:wrap;gap:8px"><div class="ct">Tagesübersicht je Fahrzeug · 30 Tage</div>
+    <div class="ch" style="flex-wrap:wrap;gap:8px"><div class="ct" id="ds-title">Tagesübersicht je Fahrzeug · 30 Tage</div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-sm btn-ghost" onclick="dsShift(-30)">‹ 30 Tage zurück</button>
-        <label style="font-size:11px;color:var(--text3)">ab</label><input type="date" id="ds-start" onchange="dsDaily()">
+        <label style="font-size:11px;color:var(--text3)">von</label><input type="date" id="ds-start" onchange="dsDaily()">
+        <label style="font-size:11px;color:var(--text3)">bis</label><input type="date" id="ds-end" onchange="dsDaily()" title="leer = 30 Tage ab „von“">
         <button class="btn btn-sm btn-ghost" onclick="dsShift(30)">30 Tage vor ›</button>
         <button class="btn btn-sm btn-ghost" onclick="dsToday()">Letzte 30 Tage</button>
       </div></div>
-    <div class="ds-hint">Tagespauschale = Kosten des Fahrzeugs pro Tag (hier eintragen, wird automatisch gespeichert). Marge = Umsatz − Einkauf − Tagespauschale. ⤓ trägt eine Pauschale in alle leeren Tage ein.</div>
+    <div class="ds-hint">Tagespauschale = Kosten des Fahrzeugs pro Tag (hier eintragen, wird automatisch gespeichert). Marge = Umsatz − Einkauf − Tagespauschale. Zeitraum: „von“ und „bis“ setzen (ohne „bis“ werden 30 Tage ab „von“ gezeigt, max. 366 Tage). ⤓ trägt eine Pauschale in alle leeren Tage ein.</div>
     <div class="ds-wrap" id="ds-daily"></div>
   </div>
   <div class="card"><div class="ch"><div class="ct">Je Fahrzeug · Zeitraum von/bis (oben)</div></div><div class="tw" id="ds-veh"></div></div>
@@ -3319,8 +3320,14 @@ const dsMoney=n=>Number(n).toFixed(2).replace('.',',');
 const dsNeg=n=>n<0?' style="color:#dc2626"':'';
 async function dsLoadRates(){try{const r=await fetch('/api/dispo/rates');dsRates=r.ok?await r.json():{}}catch{dsRates={}}if(!dsRates||typeof dsRates!=='object')dsRates={}}
 function dsStart(){const el=document.getElementById('ds-start');if(!el.value)el.value=dsAddDays(dpToday(),-29);return el.value}
-function dsShift(n){const el=document.getElementById('ds-start');el.value=dsAddDays(dsStart(),n);dsDaily()}
-function dsToday(){document.getElementById('ds-start').value=dsAddDays(dpToday(),-29);dsDaily()}
+function dsDays(){
+  const start=dsStart();let end=document.getElementById('ds-end').value;
+  if(!end||end<start)end=dsAddDays(start,29);
+  const n=Math.min(366,Math.round((new Date(end+'T12:00:00')-new Date(start+'T12:00:00'))/864e5)+1);
+  return Array.from({length:n},(_,i)=>dsAddDays(start,i));
+}
+function dsShift(n){const el=document.getElementById('ds-start'),e=document.getElementById('ds-end');el.value=dsAddDays(dsStart(),n);if(e.value)e.value=dsAddDays(e.value,n);dsDaily()}
+function dsToday(){document.getElementById('ds-start').value=dsAddDays(dpToday(),-29);document.getElementById('ds-end').value='';dsDaily()}
 function dsRange(){return[document.getElementById('ds-from').value,document.getElementById('ds-to').value]}
 function dsInRange(d){const[fr,to]=dsRange();return(!fr||d>=fr)&&(!to||d<=to)}
 // Summen je Fahrzeug im Zeitraum von/bis
@@ -3352,23 +3359,24 @@ function dsCell(v,day){
   return{n:l.length,c,r,m:r-e-p,p,has:l.length>0||p!==0};
 }
 function dsDaily(){
-  const start=dsStart(),days=Array.from({length:30},(_,i)=>dsAddDays(start,i)),vs=dsVeh(),today=dpToday();
+  const days=dsDays(),vs=dsVeh(),today=dpToday();
+  document.getElementById('ds-title').textContent='Tagesübersicht je Fahrzeug · '+days.length+' Tage';
   let h1='<tr><th rowspan="2" class="ds-d">Datum</th>',h2='<tr>';
-  vs.forEach((v,i)=>{h1+=`<th colspan="5" class="vb vc${i%4}">${dpEsc(v)} <button class="ds-fill" title="Tagespauschale für alle leeren Tage dieser Tabelle eintragen" onclick="dsFill(${i})">⤓</button></th>`;h2+=`<th class="vb">Tages&shy;pauschale €</th><th>Aufträge</th><th>Cont.</th><th>Umsatz</th><th>Marge</th>`});
+  vs.forEach((v,i)=>{h1+=`<th colspan="4" class="vb vc${i%4}">${dpEsc(v)} <button class="ds-fill" title="Tagespauschale für alle leeren Tage dieser Tabelle eintragen" onclick="dsFill(${i})">⤓</button></th>`;h2+=`<th class="vb">Tages&shy;pauschale €</th><th>Aufträge</th><th>Umsatz</th><th>Marge</th>`});
   const body=days.map(day=>{
     const wd=dsWd(day),cls=(wd==='Sa'||wd==='So'?'we ':'')+(day===today?'td':'');
     return `<tr class="${cls}"><td class="ds-d"><b>${wd}</b> ${dpDate(day).slice(0,6)}${day.slice(0,4)!==today.slice(0,4)?day.slice(0,4):''}</td>`+vs.map((v,i)=>{
       const c=dsCell(v,day),raw=(dsRates[v]||{})[day];
-      return `<td class="vb"><input class="ds-rate" inputmode="decimal" placeholder="–" data-v="${dpEsc(v)}" data-d="${day}" value="${raw!==undefined?dsMoney(raw):''}" onchange="dsRateSet(this)"></td><td>${c.n||''}</td><td>${c.c||''}</td><td class="r">${c.r?eur(c.r):''}</td><td class="r" id="dsm-${i}-${day}"${dsNeg(c.m)}>${c.has?eur(c.m):''}</td>`}).join('')+'</tr>';
+      return `<td class="vb"><input class="ds-rate" inputmode="decimal" placeholder="–" data-v="${dpEsc(v)}" data-d="${day}" value="${raw!==undefined?dsMoney(raw):''}" onchange="dsRateSet(this)"></td><td>${c.n||''}</td><td class="r">${c.r?eur(c.r):''}</td><td class="r" id="dsm-${i}-${day}"${dsNeg(c.m)}>${c.has?eur(c.m):''}</td>`}).join('')+'</tr>';
   }).join('');
   document.getElementById('ds-daily').innerHTML=`<table class="ds-t"><thead>${h1}</tr>${h2}</tr></thead><tbody>${body}</tbody><tfoot id="ds-foot"></tfoot></table>`;
   dsFoot();
 }
 function dsFoot(){
   const el=document.getElementById('ds-foot');if(!el)return;
-  const start=dsStart(),days=Array.from({length:30},(_,i)=>dsAddDays(start,i));
-  el.innerHTML='<tr class="ds-sum"><td class="ds-d">Summe 30 Tage</td>'+dsVeh().map(v=>{const T=days.reduce((a,d)=>{const c=dsCell(v,d);return{n:a.n+c.n,c:a.c+c.c,r:a.r+c.r,m:a.m+c.m,p:a.p+c.p}},{n:0,c:0,r:0,m:0,p:0});
-    return `<td class="vb r">${eur(T.p)}</td><td>${T.n}</td><td>${T.c}</td><td class="r">${eur(T.r)}</td><td class="r"${dsNeg(T.m)}>${eur(T.m)}</td>`}).join('')+'</tr>';
+  const days=dsDays();
+  el.innerHTML='<tr class="ds-sum"><td class="ds-d">Summe '+days.length+' Tage</td>'+dsVeh().map(v=>{const T=days.reduce((a,d)=>{const c=dsCell(v,d);return{n:a.n+c.n,c:a.c+c.c,r:a.r+c.r,m:a.m+c.m,p:a.p+c.p}},{n:0,c:0,r:0,m:0,p:0});
+    return `<td class="vb r">${eur(T.p)}</td><td>${T.n}</td><td class="r">${eur(T.r)}</td><td class="r"${dsNeg(T.m)}>${eur(T.m)}</td>`}).join('')+'</tr>';
 }
 async function dsSave(v,entries){
   const r=await fetch('/api/dispo/rates',{method:'POST',headers:J,body:JSON.stringify({vehicle:v,entries})});const j=await r.json();
@@ -3384,8 +3392,8 @@ async function dsRateSet(inp){
   dsFoot();dsKpis();dsSummary();
 }
 async function dsFill(i){
-  const v=dsVeh()[i],start=dsStart(),days=Array.from({length:30},(_,k)=>dsAddDays(start,k));
-  const t=prompt(`Tagespauschale in € für ${v}\n(wird in alle leeren Tage von ${dpDate(days[0])} bis ${dpDate(days[29])} eingetragen):`);
+  const v=dsVeh()[i],days=dsDays();
+  const t=prompt(`Tagespauschale in € für ${v}\n(wird in alle leeren Tage von ${dpDate(days[0])} bis ${dpDate(days[days.length-1])} eingetragen):`);
   if(t===null||t.trim()==='')return;if(isNaN(parseFloat(t.replace(',','.')))){toast('Bitte eine Zahl eingeben','err');return}
   const en={};days.forEach(d=>{if((dsRates[v]||{})[d]===undefined)en[d]=t});
   if(await dsSave(v,en)){dispoStatsRender();toast('Pauschale eingetragen ✓')}
