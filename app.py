@@ -2,6 +2,8 @@
 LAGLOG Cloud — Lagonis Logistics Web App
 Multi-user, session-based login, Render.com ready
 """
+from werkzeug.security import generate_password_hash, check_password_hash
+import hmac, time
 from flask import (Flask, request, jsonify, send_file, render_template,
                    send_from_directory, session, redirect, url_for, abort)
 import json, os, sys, uuid, io, zipfile, smtplib, copy, hashlib, secrets, functools
@@ -31,11 +33,46 @@ CONFIG_FILE = os.path.join(DATA_DIR, 'config.json')
 USERS_FILE  = os.path.join(DATA_DIR, 'users.json')
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+def _load_secret_key():
+    k = os.environ.get('SECRET_KEY')
+    if k: return k
+    f = os.path.join(DATA_DIR, 'secret.key')   # dauerhaft speichern -> kein Logout nach Neustart
+    try:
+        if os.path.exists(f):
+            k = open(f).read().strip()
+            if k: return k
+        k = secrets.token_hex(32)
+        with open(f, 'w') as fh: fh.write(k)
+        try: os.chmod(f, 0o600)
+        except Exception: pass
+        return k
+    except Exception:
+        return secrets.token_hex(32)
+app.secret_key = _load_secret_key()
 app.permanent_session_lifetime = timedelta(days=7)
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax')
 
 # ── Auth helpers ─────────────────────────────────────────
-def hash_pw(pw): return hashlib.sha256(pw.encode()).hexdigest()
+def _legacy_hash(pw): return hashlib.sha256(pw.encode()).hexdigest()
+def hash_pw(pw): return generate_password_hash(pw)          # gesalzen (pbkdf2/scrypt)
+def verify_pw(stored, pw):
+    stored = stored or ''
+    if stored.startswith(('pbkdf2:', 'scrypt:')):
+        try: return check_password_hash(stored, pw)
+        except Exception: return False
+    return hmac.compare_digest(stored, _legacy_hash(pw))     # altes Format (wird beim Login umgestellt)
+def is_legacy_hash(stored): return not (stored or '').startswith(('pbkdf2:', 'scrypt:'))
+
+# Login-Sperre: 5 Fehlversuche -> 15 Minuten
+_FAILS = {}
+def _lock_key(username): return (request.remote_addr or '') + '|' + str(username or '').lower()
+def _locked(k):
+    f = _FAILS.get(k)
+    return bool(f and f[0] >= 5 and time.time() < f[1])
+def _fail(k):
+    n = (_FAILS.get(k) or (0, 0))[0] + 1
+    _FAILS[k] = (n, time.time() + 900)
+
 
 def load_users():
     if not os.path.exists(USERS_FILE):
@@ -123,7 +160,6 @@ def load_config():
         'bank_iban':'','bank_bic':'','bank_name':'',
         'default_author':'',
         'order_prefix':'LL-TA','inquiry_prefix':'ANF','customer_prefix':'KD',
-        'show_price_default':False,
         'order_counter_override':0,
     }
     if os.path.exists(CONFIG_FILE):
@@ -178,12 +214,20 @@ def static_files(path): return send_from_directory('static', path)
 # ── Auth API ──────────────────────────────────────────────
 @app.route('/api/auth/login', methods=['POST'])
 def api_login():
-    data = request.json
+    data = request.json or {}
+    lk = _lock_key(data.get('username'))
+    if _locked(lk):
+        return jsonify({'ok': False, 'message': 'Zu viele Fehlversuche. Bitte in 15 Minuten erneut versuchen.'}), 429
     users = load_users()
     user = next((u for u in users if u['username'] == data.get('username')
-                 and u['password'] == hash_pw(data.get('password',''))), None)
+                 and verify_pw(u['password'], data.get('password',''))), None)
     if not user:
+        _fail(lk)
         return jsonify({'ok': False, 'message': 'Benutzername oder Passwort falsch'}), 401
+    _FAILS.pop(lk, None)
+    if is_legacy_hash(user['password']):                     # automatisch auf gesalzenen Hash umstellen
+        user['password'] = hash_pw(data.get('password',''))
+        save_users(users)
     session.permanent = True
     session['user_id'] = user['id']
     return jsonify({'ok': True, 'name': user['name'], 'role': user['role']})
@@ -201,7 +245,7 @@ def change_password():
     users = load_users()
     for user in users:
         if user['id'] == u['id']:
-            if user['password'] != hash_pw(data.get('old','')):
+            if not verify_pw(user['password'], data.get('old','')):
                 return jsonify({'ok': False, 'message': 'Altes Passwort falsch'}), 400
             user['password'] = hash_pw(data.get('new',''))
             save_users(users)
@@ -298,10 +342,16 @@ def set_config():
 @login_required
 def test_smtp():
     import threading
+    cfg = load_config(); body = request.json or {}
+    for k in ('smtp_host', 'smtp_port', 'smtp_user', 'smtp_ssl', 'from_email'):     # aktuelle Formularwerte testen, auch ungespeicherte
+        if k in body and body[k] not in (None, ''): cfg[k] = body[k]
+    if body.get('smtp_pass') not in (None, '', '***'): cfg['smtp_pass'] = body['smtp_pass']
     result = {'ok': False, 'message': 'Timeout — Server nicht erreichbar'}
     def try_connect():
         try:
-            _smtp_connect(load_config())
+            srv = _smtp_connect(cfg)
+            try: srv.quit()
+            except Exception: pass
             result['ok'] = True
             result['message'] = 'Verbindung erfolgreich!'
         except Exception as e:
@@ -310,7 +360,7 @@ def test_smtp():
     t = threading.Thread(target=try_connect)
     t.daemon = True
     t.start()
-    t.join(timeout=8)  # max 8 seconds
+    t.join(timeout=40)  # Haupt- + Zweitversuch
     status = 200 if result['ok'] else 400
     return jsonify(result), status
 
@@ -536,7 +586,7 @@ def backup():
     buf = io.BytesIO(backup_data.encode('utf-8'))
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
     return send_file(buf, mimetype='application/json',
-                     as_attachment=True, download_name=f'laglog_backup_{ts}.json')
+                     as_attachment=True, download_name=f'hanseaerp_backup_{ts}.json')
 
 @app.route('/api/restore', methods=['POST'])
 @login_required
@@ -646,42 +696,79 @@ def _smtp_provider(host):
     if 'office365' in h or 'outlook' in h or 'hotmail' in h or 'live.com' in h: return 'microsoft'
     return ''
 
-def _smtp_connect(cfg):
+def _smtp_ehlo_name(cfg):
+    """Gültiger EHLO-Name (manche Server trennen bei ungültigem Rechnernamen sofort)"""
+    import socket
+    try:
+        n = socket.getfqdn()
+        if n and '.' in n and n.isascii() and ' ' not in n and not n.endswith('.local'): return n
+    except Exception: pass
+    fe = (cfg.get('from_email') or cfg.get('smtp_user') or '')
+    dom = fe.split('@')[-1] if '@' in fe else ''
+    return dom if '.' in dom else 'mail.example.com'
+
+def _smtp_open(cfg, host, port, use_ssl, timeout=12):
+    """Eine Verbindung aufbauen. Fehler enthalten den Schritt, bei dem es scheiterte."""
     import ssl
+    u = (cfg.get('smtp_user') or '').strip(); p = cfg.get('smtp_pass') or ''
+    ctx = ssl.create_default_context(); srv = None; step = 'Verbindungsaufbau / Begrüßung des Servers'
+    try:
+        if use_ssl: srv = smtplib.SMTP_SSL(host, port, timeout=timeout, context=ctx, local_hostname=_smtp_ehlo_name(cfg))
+        else: srv = smtplib.SMTP(host, port, timeout=timeout, local_hostname=_smtp_ehlo_name(cfg))
+        step = 'EHLO'; srv.ehlo()
+        if not use_ssl:
+            if srv.has_extn('starttls'):
+                step = 'STARTTLS (Verschlüsselung)'; srv.starttls(context=ctx); srv.ehlo()
+            elif u and p:
+                raise ValueError('Der Mail-Server bietet keine verschlüsselte Verbindung (STARTTLS) an – Zugangsdaten werden nicht unverschlüsselt gesendet.')
+        if u and p: step = 'Anmeldung'; srv.login(u, p)
+        return srv
+    except smtplib.SMTPAuthenticationError:
+        try: srv.close()
+        except Exception: pass
+        raise
+    except Exception as e:
+        try: srv and srv.close()
+        except Exception: pass
+        if isinstance(e, ValueError): raise
+        raise ConnectionError(f'{type(e).__name__}: {e} (bei: {step})')
+
+def _tcp_probe(host, port, timeout=4):
+    import socket
+    try:
+        s = socket.create_connection((host, port), timeout=timeout); s.close(); return 'TCP erreichbar'
+    except Exception as e:
+        return f'nicht erreichbar ({type(e).__name__})'
+
+def _smtp_connect(cfg):
     host = (cfg.get('smtp_host') or '').strip()
     if not host: raise ValueError('SMTP-Host nicht konfiguriert. Bitte unter ⚙ Einstellungen → E-Mail / SMTP eintragen.')
     try: port = int(cfg.get('smtp_port') or 587)
     except Exception: port = 587
-    use_ssl = cfg.get('smtp_ssl', False)
+    use_ssl = bool(cfg.get('smtp_ssl')) or port == 465
     prov = _smtp_provider(host)
-    u = (cfg.get('smtp_user') or '').strip(); p = cfg.get('smtp_pass') or ''
-    ctx = ssl.create_default_context()
-    srv = None
-    try:
-        if use_ssl or port == 465:
-            srv = smtplib.SMTP_SSL(host, port, timeout=20, context=ctx); srv.ehlo()
-        else:
-            srv = smtplib.SMTP(host, port, timeout=20); srv.ehlo()
-            if srv.has_extn('starttls'):
-                srv.starttls(context=ctx); srv.ehlo()
-            elif u and p:
-                raise ValueError('Der Mail-Server bietet keine verschlüsselte Verbindung (STARTTLS) an – Zugangsdaten werden nicht unverschlüsselt gesendet.')
-        if u and p: srv.login(u, p)
-        return srv
-    except smtplib.SMTPAuthenticationError as e:
-        try: srv and srv.close()
-        except Exception: pass
-        if prov == 'gmail':
-            raise ValueError('Gmail hat die Anmeldung abgelehnt. Bitte ein App-Passwort verwenden (Google-Konto → Sicherheit → 2-Schritt-Verifizierung → App-Passwörter) – das normale Passwort funktioniert nicht. Benutzername = vollständige Gmail-Adresse.')
-        if prov == 'microsoft':
-            raise ValueError('Microsoft hat die Anmeldung abgelehnt. Bei Microsoft 365 muss „Authentifiziertes SMTP“ für das Postfach aktiviert sein (Admin-Center → Benutzer → E-Mail → E-Mail-Apps verwalten). Bei privaten Outlook.com-Konten ein App-Passwort verwenden und Host smtp-mail.outlook.com eintragen.')
-        raise ValueError('Anmeldung fehlgeschlagen. Benutzername (meist die komplette E-Mail-Adresse) und Passwort prüfen.')
-    except ValueError:
-        raise
-    except (smtplib.SMTPConnectError, OSError) as e:
-        raise ValueError(f'Verbindung zu {host}:{port} fehlgeschlagen ({e}). Host/Port prüfen (587 = STARTTLS, 465 = SSL).')
-    except Exception as e:
-        raise ValueError(f'SMTP-Fehler: {str(e)}')
+    tries = [(port, use_ssl)]
+    alt = (465, True) if not use_ssl else (587, False)      # automatischer Zweitversuch mit dem anderen Standard-Port
+    if alt[0] != port: tries.append(alt)
+    errs = []
+    for pt, ssl_mode in tries:
+        try: return _smtp_open(cfg, host, pt, ssl_mode)
+        except smtplib.SMTPAuthenticationError:
+            if prov == 'gmail':
+                raise ValueError('Gmail hat die Anmeldung abgelehnt. Bitte ein App-Passwort verwenden (Google-Konto → Sicherheit → 2-Schritt-Verifizierung → App-Passwörter) – das normale Passwort funktioniert nicht. Benutzername = vollständige Gmail-Adresse.')
+            if prov == 'microsoft':
+                raise ValueError('Microsoft hat die Anmeldung abgelehnt. Bei Microsoft 365 muss „Authentifiziertes SMTP“ für das Postfach aktiviert sein (Admin-Center → Benutzer → E-Mail → E-Mail-Apps verwalten). Bei privaten Outlook.com-Konten ein App-Passwort verwenden und Host smtp-mail.outlook.com eintragen.')
+            raise ValueError('Anmeldung fehlgeschlagen. Benutzername (meist die komplette E-Mail-Adresse) und Passwort prüfen.')
+        except ValueError: raise
+        except ConnectionError as e: errs.append((pt, str(e)))
+    probes = [(pt, _tcp_probe(host, pt)) for pt, _ in tries]
+    probe = ' · '.join(f'Port {pt}: {r}' for pt, r in probes)
+    msg = f'Keine Verbindung zu {host} möglich. ' + ' | '.join(f'Port {pt} → {m}' for pt, m in errs) + f'. Test: {probe}.'
+    if any(r == 'TCP erreichbar' for _, r in probes):
+        msg += ' Der Server ist erreichbar, beendet die Verbindung aber sofort bzw. antwortet nicht – das passiert, wenn der Hoster/die Firewall ausgehende Mail-Verbindungen filtert. Bitte beim Hoster nachfragen (ausgehender SMTP-Verkehr, Ports 587/465) – oder im Menü ✉ E-Mail die Funktion „In Outlook (Desktop) öffnen“ verwenden.'
+    else:
+        msg += ' Der Mail-Server ist von diesem Server aus nicht erreichbar (Firewall des Hosters sperrt ausgehende Mail-Ports?). Alternative: im Menü ✉ E-Mail „In Outlook (Desktop) öffnen“ verwenden.'
+    raise ValueError(msg)
 
 def _send_email(cfg, to_addr, subject, body, attachments=None):
     msg = MIMEMultipart()
@@ -790,7 +877,7 @@ def _logo_hdr(story, s, W, cfg):
     for k,lbl in [('company_phone','Tel.: '),('company_email',''),('company_web','')]:
         v = cfg.get(k,'')
         if v: parts2.append(lbl+v)
-    cell_l = Image(LOGO_PATH,width=35*mm,height=25*mm,kind='proportional') if os.path.exists(LOGO_PATH) else Paragraph('<b>LAGLOG</b>',s['h1'])
+    cell_l = Image(LOGO_PATH,width=35*mm,height=25*mm,kind='proportional') if os.path.exists(LOGO_PATH) else Paragraph('<b>HanseaERP</b>',s['h1'])
     t = Table([[cell_l, Paragraph('<br/>'.join(parts2), s['small'])]], colWidths=[50*mm,W-50*mm])
     t.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'MIDDLE'),('ALIGN',(1,0),(1,0),'RIGHT')]))
     story.append(t)
@@ -1047,6 +1134,7 @@ DISPO_FIELDS = [
     ('fahrzeug_nr', 'Fahrzeug-Nr.', 'termine'),
     ('status', 'Status', 'termine'),
     ('aufnahme', 'Aufnahme', 'stationen'),
+    ('aufnahme_adresse', 'Adresse Aufnahme', 'stationen'),
     ('slot_aufnahme', 'Slot Aufnahme', 'stationen'),
     ('tourenplan_aufnahme', 'Tourenplan Aufnahme', 'stationen'),
     ('gestellung', 'Gestellung', 'stationen'),
@@ -1054,6 +1142,7 @@ DISPO_FIELDS = [
     ('slot_gestellung', 'Slot/Zeit Gestellung', 'stationen'),
     ('ref_gestellung', 'Referenz Gestellung', 'stationen'),
     ('leerdepot', 'Leerdepot', 'stationen'),
+    ('leerdepot_adresse', 'Adresse Leerdepot', 'stationen'),
     ('slot_leerdepot', 'Slot Leerdepot', 'stationen'),
     ('tourenplan_leerdepot', 'Tourenplan Leerdepot', 'stationen'),
     ('container_nr', 'Container-Nr.', 'container'),
@@ -1071,7 +1160,7 @@ DISPO_LABEL = {f[0]: f[1] for f in DISPO_FIELDS}
 DISPO_PDF_DEFAULT = [k for k in DISPO_KEYS if k not in ('nr', 'einkaufspreis', 'verkaufspreis')]
 DISPO_STATUS = {'offen': 'Offen', 'in_fahrt': 'In Fahrt', 'erledigt': 'Erledigt', 'storniert': 'Storniert'}
 DISPO_BULK_FIELDS = [k for k in DISPO_KEYS if k not in ('nr', 'container_extra')]
-NEW_FIELDS = {'container_extra': 3, 'gestellung_adresse': 4}   # Feld -> Version, ab der es bekannt ist (ältere Einstellungen bekommen es automatisch)
+NEW_FIELDS = {'container_extra': 3, 'gestellung_adresse': 4, 'aufnahme_adresse': 5, 'leerdepot_adresse': 5}   # Feld -> Version, ab der es bekannt ist (ältere Einstellungen bekommen es automatisch)
 
 def _extras(d):
     """Weitere Container als [(nr, typ)] – akzeptiert Liste oder CSV-Text 'NR:TYP | NR:TYP'"""
@@ -1320,7 +1409,8 @@ def _foot(cfg, label):
 def _station_html(d, sel, key, extras):
     lines = []
     if key in sel and d.get(key): lines.append('<b>' + _e(d[key]) + '</b>')
-    if key == 'gestellung' and 'gestellung_adresse' in sel and d.get('gestellung_adresse'): lines.append('<font color="#475569">' + _e(d['gestellung_adresse']) + '</font>')
+    ak = key + '_adresse'
+    if ak in sel and d.get(ak): lines.append('<font color="#475569">' + _e(d[ak]) + '</font>')
     for k, pre in extras:
         if k in sel and d.get(k): lines.append(f'<font color="#475569">{pre}:</font> {_e(d[k])}')
     return '<br/>'.join(lines) or '-'
@@ -1349,7 +1439,7 @@ def _plan_columns(sel):
     if sel & {'container_nr', 'container_typ', 'anzahl_container', 'container_extra'}:
         c.append(('container', 'Container', 3.3, 'container', lambda d: _container_html(d, sel)))
     for key, name, extras in STATIONS:
-        if key in sel or any(k in sel for k, _ in extras) or (key == 'gestellung' and 'gestellung_adresse' in sel):
+        if key in sel or any(k in sel for k, _ in extras) or (key + '_adresse' in sel):
             c.append((key, name, 3.6, 'stationen', lambda d, key=key, extras=extras: _station_html(d, sel, key, extras)))
     simple('slot_gebucht', 1.6, lambda d: 'Ja' if str(d.get('slot_gebucht', '')).lower() in ('ja', 'true', '1') else 'Nein')
     simple('reederei', 1.8); simple('status', 1.5, lambda d: _e(DISPO_STATUS.get(d.get('status'), d.get('status'))) or '-')
@@ -1431,7 +1521,7 @@ def _order_story(d, cfg, s, W):
             v = _fd(d.get(k)) if k in ('lieferdatum', 'datum') else (_e(DISPO_STATUS.get(d.get('status'), d.get('status'))) or '-') if k == 'status' else None
             termine.append(F(k, v))
     add('termine', termine)
-    blocks = [(name, _station_html(d, sel, key, extras)) for key, name, extras in STATIONS if key in sel or any(k in sel for k, _ in extras) or (key == 'gestellung' and 'gestellung_adresse' in sel)]
+    blocks = [(name, _station_html(d, sel, key, extras)) for key, name, extras in STATIONS if key in sel or any(k in sel for k, _ in extras) or (key + '_adresse' in sel)]
     add('stationen', blocks)
     cont = [F(k) for k in ('container_nr', 'container_typ', 'anzahl_container', 'reederei') if k in sel]
     if 'slot_gebucht' in sel: cont.append(F('slot_gebucht', yn(d.get('slot_gebucht', ''))))
@@ -1504,6 +1594,7 @@ def tagesplan_pdf():
 # ── E-Mail-Versand aus der Dispo (Tagesplan / Aufträge) ───
 import re as _re_mail
 from email.message import EmailMessage as _EmailMessage
+from email import policy as _mail_policy
 from email.utils import formatdate as _fdate, make_msgid as _mkid, formataddr as _fmtaddr
 
 def _mail_files(data):
@@ -1593,7 +1684,7 @@ def dispo_mail_eml():
     data = request.json or {}
     try:
         files, n = _mail_files(data); msg, _fe, _r = _mail_build(data, files, unsent=True)
-        return send_file(io.BytesIO(msg.as_bytes()), mimetype='message/rfc822', as_attachment=True,
+        return send_file(io.BytesIO(msg.as_bytes(policy=_mail_policy.SMTP)), mimetype='message/rfc822', as_attachment=True,
                          download_name=f"HG_E-Mail_Entwurf_{datetime.now().strftime('%Y%m%d_%H%M')}.eml")
     except Exception as e: return jsonify({'ok': False, 'message': str(e)}), 400
 
