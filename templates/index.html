@@ -373,6 +373,42 @@ table.dp th .fitb:hover{background:rgba(255,255,255,.4)}
 table.dp .acts{display:flex;flex-wrap:nowrap;gap:4px;white-space:nowrap}
 table.dp td.c0:last-child{overflow:visible}
 
+.dp-acw{position:relative}.dp-acw .dp-acl{top:calc(100% + 2px);z-index:400}
+.dp-acl .ac-item.on{background:var(--blue-bg)}
+.dp-acl .ac-sub{font-size:11px;color:var(--text3);margin-top:1px}
+/* E-Mail */
+.ml-grid{display:grid;grid-template-columns:minmax(320px,1fr) minmax(360px,1.2fr);gap:14px;align-items:start}
+@media(max-width:1000px){.ml-grid{grid-template-columns:1fr}}
+.ml-card{padding:16px 18px}
+.ml-step{font-size:13px;font-weight:800;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.ml-step span{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#0e7490,#06b6d4);color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center}
+.ml-seg{display:flex;gap:0;border:1.5px solid #0e7490;border-radius:10px;overflow:hidden;margin-bottom:12px}
+.ml-seg button{flex:1;padding:9px;border:0;background:#fff;color:#0e7490;font-weight:700;font-size:12px;cursor:pointer;transition:all .15s}
+.ml-seg button.on{background:#0e7490;color:#fff}
+.ml-filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;font-size:11px;color:var(--text3)}
+.ml-filters input,.ml-filters select,.ml-ofilters input{padding:7px 9px;border:1px solid var(--border2);border-radius:6px;font-size:12px;background:var(--surface)}
+.ml-ofilters{display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:11px;flex-wrap:wrap}
+.ml-ofilters input{flex:1;min-width:140px}
+.ml-link{color:var(--accent2);cursor:pointer;font-weight:600}
+.ml-olist{max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:8px}
+.ml-orow{display:grid;grid-template-columns:24px 1.1fr 1fr 1fr 70px;gap:8px;align-items:center;padding:6px 10px;font-size:12px;border-bottom:1px solid #eef0f3;cursor:pointer}
+.ml-orow:nth-child(even){background:#f6f7f9}.ml-orow:hover{background:#e0f2fe}.ml-orow:last-child{border-bottom:0}
+.ml-orow .s{color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ml-merge{display:flex;gap:16px;margin-top:8px;font-size:12px}.ml-merge label{display:flex;gap:5px;align-items:center;cursor:pointer}
+.ml-attach{margin-top:12px;padding:10px 12px;border-radius:8px;background:#ecfeff;border:1px dashed #06b6d4;font-size:12px;color:#0f172a;line-height:1.6}
+.ml-attach.warn{background:#fef2f2;border-color:#f87171;color:#b91c1c}
+.ml-from{font-size:11px;color:var(--text3);margin-bottom:10px;padding:6px 10px;background:var(--surface2);border-radius:6px}
+.ml-from.warn{background:#fffbeb;color:#92400e}.ml-from a{color:var(--accent2);cursor:pointer;font-weight:700}
+#page-email .fg{margin-bottom:10px}
+#page-email .fg textarea,#page-email .fg input{width:100%}
+.ml-actions{display:flex;align-items:center;gap:12px;margin:4px 0 12px}
+.ml-send{padding:10px 22px;font-size:13px;background:linear-gradient(135deg,#0e7490,#06b6d4)!important;border-color:#0e7490!important}
+.ml-msg{font-size:12px;font-weight:600}
+.ml-alt{border-top:1px dashed var(--border2);padding-top:10px}
+.ml-alt-t{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px}.ml-alt-b{display:flex;gap:6px;flex-wrap:wrap}
+.ml-alt-h{font-size:11px;color:var(--text3);margin-top:7px;line-height:1.5}
+.ml-log{font-size:12px}.ml-log div{padding:5px 0;border-bottom:1px solid #eef0f3;display:flex;gap:10px;flex-wrap:wrap}.ml-log b{min-width:120px}.ml-log span{color:var(--text3)}
+
 </style>
 </head>
 <body>
@@ -390,6 +426,7 @@ table.dp td.c0:last-child{overflow:visible}
     <button class="nb nb-dispo" onclick="showPage('dispo',this)">🚛 Dispo</button>
     <button class="nb" onclick="showPage('dispostats',this)">Dispo-Statistik</button>
     <button class="nb" onclick="showPage('customers',this)">Kunden</button>
+    <button class="nb" onclick="showPage('email',this)">✉ E-Mail</button>
   </nav>
   <div class="hright">
     <button class="btn btn-sm" style="background:#0e7490;border:none;color:white" onclick="openNewInquiry();showPage('inquiries',document.querySelectorAll('.nb')[1])">+ Anfrage</button>
@@ -566,6 +603,7 @@ table.dp td.c0:last-child{overflow:visible}
         <button class="btn btn-sm" onclick="dpPreset('today')">Heute</button><button class="btn btn-sm" onclick="dpPreset('tomorrow')">Morgen</button><button class="btn btn-sm" onclick="dpPreset('week')">Woche</button><button class="btn btn-sm" onclick="dpPreset('nextweek')">Nächste Woche</button>
         <select id="dp-plan-veh" title="Nach Fahrzeug filtern"><option value="">Alle Fahrzeuge</option></select>
         <button class="btn btn-amber" onclick="dispoTagesplan()">📋 Tagesplan PDF</button>
+        <button class="btn btn-sm" onclick="mailFromPlan()" title="Diesen Tagesplan per E-Mail versenden">✉</button>
       </div>
       <button class="btn btn-dark" onclick="dispoOpen()">＋ Neuer Auftrag</button>
     </div>
@@ -596,6 +634,7 @@ table.dp td.c0:last-child{overflow:visible}
     <button class="btn btn-sm btn-go" onclick="dispoBulkApply()">✔ Anwenden</button><span class="sep"></span>
     <button class="btn btn-sm" onclick="dispoBulkPdf()">📄 Sammel-PDF</button>
     <button class="btn btn-sm" onclick="dispoBulkPlan()">📋 Tagesplan aus Auswahl</button>
+    <button class="btn btn-sm" onclick="mailFromSelection()">✉ Per E-Mail</button>
     <button class="btn btn-sm" onclick="dispoBulkCsv()">⬇ CSV</button>
     <button class="btn btn-sm" onclick="dispoBulkDup()">⧉ Duplizieren</button>
     <button class="btn btn-sm btn-red" onclick="dispoBulkDel()">🗑 Löschen</button>
@@ -616,6 +655,53 @@ table.dp td.c0:last-child{overflow:visible}
     <div class="card"><div class="ch"><div class="ct">Status</div></div><div style="height:280px"><canvas id="ds-chart-status"></canvas></div></div>
   </div>
   <div class="card"><div class="ch"><div class="ct">Je Fahrzeug</div></div><div class="tw" id="ds-veh"></div></div>
+</div>
+
+<!-- ═══ E-MAIL ═══ -->
+<div class="page" id="page-email">
+  <div class="ph"><div><div class="pt">✉ E-Mail</div><div class="ps">Tagespläne und Transportaufträge aus der Dispo per E-Mail versenden</div></div></div>
+  <div class="ml-grid">
+    <div class="card ml-card">
+      <div class="ml-step"><span>1</span> Was soll versendet werden?</div>
+      <div class="ml-seg"><button id="ml-k-plan" class="on" onclick="mailKind('plan')">📋 Tagesplan</button><button id="ml-k-orders" onclick="mailKind('orders')">📄 Einzelne Aufträge</button></div>
+      <div class="ml-filters">
+        <label>Lieferdatum</label><input type="date" id="ml-from" onchange="mailSrcChanged()"><label>bis</label><input type="date" id="ml-to" onchange="mailSrcChanged()" title="leer = nur ein Tag">
+        <button class="btn btn-sm" onclick="mailPreset('today')">Heute</button><button class="btn btn-sm" onclick="mailPreset('tomorrow')">Morgen</button><button class="btn btn-sm" onclick="mailPreset('week')">Woche</button>
+        <select id="ml-veh" onchange="mailSrcChanged()"><option value="">Alle Fahrzeuge</option></select>
+      </div>
+      <div id="ml-orders-box" style="display:none">
+        <div class="ml-ofilters"><input type="text" id="ml-q" placeholder="🔍 Aufträge suchen…" oninput="mailRenderOrders()"><span class="ml-link" onclick="mailSelAll(true)">alle sichtbaren wählen</span> · <span class="ml-link" onclick="mailSelAll(false)">keine</span></div>
+        <div class="ml-olist" id="ml-olist"></div>
+        <div class="ml-merge"><label><input type="radio" name="ml-merge" value="0" checked onchange="mailSrcChanged()"> Je Auftrag ein PDF</label><label><input type="radio" name="ml-merge" value="1" onchange="mailSrcChanged()"> Ein gemeinsames PDF</label></div>
+      </div>
+      <div class="ml-attach" id="ml-attach">–</div>
+    </div>
+    <div class="card ml-card">
+      <div class="ml-step"><span>2</span> E-Mail</div>
+      <div class="ml-from" id="ml-from-info"></div>
+      <div class="fg"><label>An (mehrere mit Komma oder Semikolon)</label><input type="text" id="ml-to-addr" list="ml-dl" placeholder="empfaenger@firma.de" autocomplete="off" oninput="mailValidate()"></div>
+      <div class="fg"><label>Cc (optional)</label><input type="text" id="ml-cc" list="ml-dl" placeholder="" autocomplete="off"></div>
+      <datalist id="ml-dl"></datalist>
+      <div class="fg"><label>Betreff</label><input type="text" id="ml-subj" autocomplete="off" oninput="mailDirty.s=true"></div>
+      <div class="fg"><label>Nachricht</label><textarea id="ml-body" rows="9" oninput="mailDirty.b=true"></textarea></div>
+      <div class="ml-actions">
+        <button class="btn btn-dark ml-send" id="ml-send" onclick="mailSend()">✉ Jetzt senden</button>
+        <span id="ml-msg" class="ml-msg"></span>
+      </div>
+      <div class="ml-alt">
+        <div class="ml-alt-t">Oder mit deinem eigenen Postfach – ohne Server-Einstellungen:</div>
+        <div class="ml-alt-b">
+          <button class="btn btn-sm" onclick="mailEml()" title="Öffnet sich in Outlook (Desktop), Apple Mail oder Thunderbird als fertiger Entwurf mit Anhang">📎 Outlook-/Mail-Entwurf (.eml)</button>
+          <button class="btn btn-sm" onclick="mailWeb('gmail')" title="Lädt den Anhang herunter und öffnet Gmail mit ausgefülltem Entwurf">Gmail öffnen</button>
+          <button class="btn btn-sm" onclick="mailWeb('o365')" title="Outlook im Browser (Microsoft 365)">Outlook Web</button>
+          <button class="btn btn-sm" onclick="mailWeb('live')" title="Outlook.com / Hotmail / Live">Outlook.com</button>
+          <button class="btn btn-sm" onclick="mailDownload()">⬇ Nur Anhang</button>
+        </div>
+        <div class="ml-alt-h">Gmail &amp; Outlook im Browser können Anhänge nicht automatisch anfügen: Der Anhang wird heruntergeladen – ziehe ihn danach in die geöffnete Mail.</div>
+      </div>
+    </div>
+  </div>
+  <div class="card ml-card" style="margin-top:14px"><div class="ml-step"><span>✓</span> Zuletzt gesendet</div><div id="ml-log" class="ml-log">–</div></div>
 </div>
 
 <!-- ANFRAGEN -->
@@ -802,6 +888,7 @@ table.dp td.c0:last-child{overflow:visible}
       <div class="form-sec">
         <div class="fs-title">Kundendaten</div>
         <div class="g4">
+          <div class="fg s2"><label>Kundennummer</label><input type="text" id="c-kdnr" disabled placeholder="wird automatisch vergeben"></div>
           <div class="fg s2"><label>Firma / Name *</label><input type="text" id="c-name" placeholder="Mustermann GmbH"></div>
           <div class="fg s2"><label>Ansprechpartner</label><input type="text" id="c-contact" placeholder="Max Mustermann"></div>
           <div class="fg s2"><label>E-Mail</label><input type="text" id="c-email" placeholder="info@mustermann.de"></div>
@@ -858,7 +945,8 @@ table.dp td.c0:last-child{overflow:visible}
             <button class="btn btn-sm" onclick="fillSmtp('smtp.gmail.com',587,'',false)">Gmail</button>
             <button class="btn btn-sm" onclick="fillSmtp('mail.gmx.net',587,'',false)">GMX</button>
             <button class="btn btn-sm" onclick="fillSmtp('smtp.web.de',587,'',false)">Web.de</button>
-            <button class="btn btn-sm" onclick="fillSmtp('smtp.office365.com',587,'',false)">Outlook</button>
+            <button class="btn btn-sm" onclick="fillSmtp('smtp.office365.com',587,'',false)">Outlook / Microsoft 365</button>
+            <button class="btn btn-sm" onclick="fillSmtp('smtp-mail.outlook.com',587,'',false)">Outlook.com / Hotmail</button>
           </div>
         </div>
         <div class="g2">
@@ -879,7 +967,10 @@ table.dp td.c0:last-child{overflow:visible}
         </div>
         <div style="margin-top:10px;background:var(--blue-bg);border-radius:6px;padding:10px 14px;font-size:11px;color:var(--blue);line-height:1.7">
           <strong>IONOS / 1&1:</strong> Host: smtp.ionos.de · Port: 587 · Benutzername = vollständige E-Mail-Adresse<br>
-          <strong>Wichtig:</strong> Bei IONOS muss der Benutzername die vollständige E-Mail-Adresse sein (z.B. info@firma.de), nicht nur der Name.
+          <strong>Wichtig:</strong> Bei IONOS muss der Benutzername die vollständige E-Mail-Adresse sein (z.B. info@firma.de), nicht nur der Name.<br>
+          <strong>Gmail:</strong> Host smtp.gmail.com · Port 587 · Benutzername = Gmail-Adresse · Passwort = <b>App-Passwort</b> (Google-Konto → Sicherheit → 2-Schritt-Verifizierung → App-Passwörter), nicht das normale Passwort.<br>
+          <strong>Outlook / Microsoft 365:</strong> Host smtp.office365.com · Port 587 · Benutzername = komplette Adresse · „Authentifiziertes SMTP“ muss im Postfach aktiviert sein. Privat (Outlook.com/Hotmail): smtp-mail.outlook.com mit App-Passwort.<br>
+          <strong>Ohne Server-Zugang:</strong> Im Menü ✉ E-Mail gibt es auch Entwurf (.eml), Gmail- und Outlook-Web-Versand ganz ohne diese Einstellungen.
         </div>
       </div>
       <!--DPSET--><div class="tab-panel" id="t-dispo">
@@ -903,18 +994,9 @@ table.dp td.c0:last-child{overflow:visible}
       <div class="tab-panel" id="t-misc">
         <div class="cfg-section-header">Datensicherung</div>
         <div style="margin-bottom:14px"><button class="btn btn-sm btn-dark" onclick="closeModal('mo-settings');openBackupRestore()">💾 Backup / Restore</button></div>
-        <div class="cfg-section-header">Standardwerte für neue Dokumente</div>
+        <div class="cfg-section-header">Standardwerte für neue Aufträge</div>
         <div class="g2">
-          <div class="fg"><label>Standard Zahlungsziel (Tage)</label><input type="number" id="cfg-default_payment_days" placeholder="14" min="1" max="365"></div>
-          <div class="fg"><label>Standard Zahlungsbedingung (Text)</label><input type="text" id="cfg-default_payment_text" placeholder="Zahlbar innerhalb 14 Tagen netto"></div>
           <div class="fg s2"><label>Standard „Erstellt von" (erscheint auf Aufträgen)</label><input type="text" id="cfg-default_author" placeholder="Max Mustermann · Tel. +49 …"></div>
-          <div class="fg s2"><label>Standard MwSt. (%)</label>
-            <select id="cfg-default_vat">
-              <option value="19">19 %</option>
-              <option value="7">7 %</option>
-              <option value="0">0 % (Steuerbefreit)</option>
-            </select>
-          </div>
         </div>
         <div class="cfg-section-header" style="margin-top:20px">Nummernkreise</div>
         <div style="background:var(--blue-bg);border-radius:6px;padding:10px 14px;font-size:11px;color:var(--blue);margin-bottom:12px">
@@ -922,6 +1004,8 @@ table.dp td.c0:last-child{overflow:visible}
         </div>
         <div class="g2">
           <div class="fg"><label>Nächste Auftragsnummer (Zähler)</label><input type="number" id="cfg-order_counter_override" placeholder="z.B. 42" min="1"></div>
+          <div class="fg"><label>Nächste Kundennummer (Zähler)</label><input type="number" id="cfg-customer_counter_override" placeholder="leer = unverändert" min="1"></div>
+          <div class="fg"><label>Kundennummer-Präfix</label><input type="text" id="cfg-customer_prefix" placeholder="KD" maxlength="10"></div>
           <div class="fg"><label>Nächste Anfragennummer (Zähler)</label><input type="number" id="cfg-inquiry_counter_override" placeholder="z.B. 10" min="1"></div>
           <div class="fg"><label>Auftrags-Präfix</label><input type="text" id="cfg-order_prefix" placeholder="LL-TA"></div>
         </div>
@@ -948,7 +1032,7 @@ table.dp td.c0:last-child{overflow:visible}
     <div class="mb">
       <div class="form-sec">
         <div class="fs-title">Daten sichern</div>
-        <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Lädt alle Aufträge, Rechnungen und Kunden als JSON-Datei herunter. Empfohlen vor Updates.</p>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Lädt alle Daten (Aufträge, Kunden, Anfragen, Dispo) als JSON-Datei herunter. Empfohlen vor Updates.</p>
         <button class="btn btn-dark" onclick="doBackup()">⬇ Backup herunterladen</button>
       </div>
       <div class="form-sec">
@@ -1020,6 +1104,7 @@ function showPage(id,btn){
   else { const m=[...document.querySelectorAll('.nb')].find(b=>(b.getAttribute('onclick')||'').includes("'"+id+"'")); if(m) m.classList.add('active'); }
   if(id==='dispo' && window.dispoRender) dispoRender();
   if(id==='dispostats' && window.dispoStatsRender) dispoStatsRender();
+  if(id==='email' && window.mailInit){ mailInit(); return; }
   refreshAll();
 }
 function closeModal(id){const e=document.getElementById(id);if(e)e.classList.remove('open')}
@@ -1655,10 +1740,11 @@ function filterCustomers(q){renderCustomersTable(q)}
 function renderCustomersTable(q=''){
   const el=document.getElementById('customers-table');
   let list=[...customers];
-  if(q) list=list.filter(c=>(c.name+c.city+c.contact+c.email).toLowerCase().includes(q.toLowerCase()));
+  if(q) list=list.filter(c=>((c.kdnr||'')+c.name+c.city+c.contact+c.email).toLowerCase().includes(q.toLowerCase()));
   document.getElementById('customers-lbl').textContent=`${list.length} Kunden`;
   if(!list.length){el.innerHTML=emptyState('👥',q?'Keine Kunden gefunden':'Noch keine Kunden — fügen Sie Kunden hinzu für schnellere Eingabe');return}
   const rows=list.map(c=>`<tr>
+    <td style="white-space:nowrap;color:var(--text2);font-weight:600">${c.kdnr||'–'}</td>
     <td><strong>${c.name||'–'}</strong></td>
     <td>${c.contact||'–'}</td>
     <td>${[c.zip,c.city].filter(Boolean).join(' ')||'–'}</td>
@@ -1669,17 +1755,19 @@ function renderCustomersTable(q=''){
       <button class="btn btn-sm btn-red" onclick="delCustomer('${c.id}')">✕</button>
     </div></td>
   </tr>`).join('');
-  el.innerHTML=`<table><thead><tr><th>Firma / Name</th><th>Ansprechpartner</th><th>Ort</th><th>E-Mail</th><th>Telefon</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table>`;
+  el.innerHTML=`<table><thead><tr><th>Kd-Nr.</th><th>Firma / Name</th><th>Ansprechpartner</th><th>Ort</th><th>E-Mail</th><th>Telefon</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 function openNewCustomer(){
   cCustId=null;
   document.getElementById('cust-modal-title').textContent='Neuer Kunde';
+  const kn=document.getElementById('c-kdnr');if(kn){kn.value='';fetch('/api/customers/next-nr').then(r=>r.json()).then(j=>{if(!cCustId)kn.placeholder='nächste: '+(j.nr||'')}).catch(()=>{})}
   ['c-name','c-contact','c-email','c-phone','c-addr','c-zip','c-city','c-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
   openModal('mo-customer');setTimeout(()=>document.getElementById('c-name').focus(),100);
 }
 function editCustomer(id){
   const c=customers.find(x=>x.id===id);cCustId=id;
   document.getElementById('cust-modal-title').textContent='Kunde bearbeiten';
+  const kn=document.getElementById('c-kdnr');if(kn)kn.value=c.kdnr||'';
   document.getElementById('c-name').value=c.name||'';document.getElementById('c-contact').value=c.contact||'';
   document.getElementById('c-email').value=c.email||'';document.getElementById('c-phone').value=c.phone||'';
   document.getElementById('c-addr').value=c.addr||'';document.getElementById('c-zip').value=c.zip||'';
@@ -1956,7 +2044,7 @@ async function doRestore(){
   if(r.ok){
     await loadAll();
     closeModal('mo-backup');
-    toast(`Wiederhergestellt: ${r.orders} Aufträge, ${r.invoices} Rechnungen, ${r.customers} Kunden ✓`);
+    toast(`Wiederhergestellt: ${r.orders} Aufträge, ${r.customers} Kunden ✓`);
   } else toast('Fehler: '+(r.message||'Unbekannt'),'err');
 }
 
@@ -1965,8 +2053,8 @@ async function openSettings(){
   const cfg=await api('/api/config');
   const keys=['company_name','company_address','company_zip','company_city','company_phone','company_email','company_web',
     'bank_iban','bank_bic','bank_name','from_name','from_email','smtp_host','smtp_port','smtp_user','smtp_pass','smtp_ssl',
-    'default_payment_days','default_payment_text','default_author','default_vat',
-    'order_prefix','show_price_default'];
+    'default_author',
+    'order_prefix','customer_prefix','show_price_default'];
   keys.forEach(k=>{
     const el=document.getElementById('cfg-'+k);if(!el)return;
     if(el.type==='checkbox') el.checked=!!cfg[k];
@@ -1976,6 +2064,7 @@ async function openSettings(){
   const db_orders_hint = 'Aktuell: '+('wird geladen...');
   const elOC=document.getElementById('cfg-order_counter_override');
   if(elOC) elOC.value='';
+  const elKC=document.getElementById('cfg-customer_counter_override');if(elKC){elKC.value='';fetch('/api/customers/next-nr').then(r=>r.json()).then(j=>{elKC.placeholder='nächste: '+(j.nr||'')}).catch(()=>{})}
   cfg_name=cfg.company_name||'Lagonis Logistics';
   document.getElementById('smtp-res').textContent='';
   openModal('mo-settings');
@@ -1988,8 +2077,8 @@ async function openSettings(){
 async function saveSettings(){
   const keys=['company_name','company_address','company_zip','company_city','company_phone','company_email','company_web',
     'bank_iban','bank_bic','bank_name','from_name','from_email','smtp_host','smtp_port','smtp_user','smtp_pass','smtp_ssl',
-    'default_payment_days','default_payment_text','default_author','default_vat',
-    'order_prefix','show_price_default',
+    'default_author',
+    'order_prefix','customer_prefix','show_price_default',
     'order_counter_override'];
   const data={};
   keys.forEach(k=>{
@@ -2006,10 +2095,13 @@ async function saveSettings(){
   const qc=parseInt(data.inquiry_counter_override)||0;
   if(oc>0) await api('/api/orders/set-counter','POST',{counter:oc});
   if(qc>0) await api('/api/inquiries/set-counter','POST',{counter:qc});
+  const kc=parseInt((document.getElementById('cfg-customer_counter_override')||{}).value)||0;
+  if(kc>0) await api('/api/customers/set-counter','POST',{counter:kc});
   // Clear counter fields
   const ocEl=document.getElementById('cfg-order_counter_override');
   if(ocEl) ocEl.value='';
   const qcEl=document.getElementById('cfg-inquiry_counter_override');if(qcEl)qcEl.value='';
+  const kcEl=document.getElementById('cfg-customer_counter_override');if(kcEl)kcEl.value='';
   closeModal('mo-settings');
   toast('Einstellungen gespeichert ✓');
   await loadAll();
@@ -2661,7 +2753,7 @@ function setupAllMemoryInputs() {
 // ── GLOBAL SMART INPUT MEMORY ──────────────────────
 function applyMemoryToModal(modalId) {
   const modal = document.getElementById(modalId);
-  if (!modal) return;
+  if (!modal || modalId==='mo-dispo') return;   // Dispo hat eigene Vorschläge (sonst doppelte Listen)
   modal.querySelectorAll('input[type="text"],input[type="email"],textarea').forEach(input => {
     if (input.dataset.memorySetup) return;
     const fieldKey = input.id || 'field_' + Math.random().toString(36).substr(2,5);
@@ -2794,13 +2886,14 @@ const DP_FIELDS=[
  {k:'fahrzeug_nr',n:'Fahrzeug-Nr.',g:'termine',w:105,t:'combo',mem:1,empty:'– kein Fahrzeug –'},
  {k:'status',n:'Status',g:'termine',w:120,t:'combo',span:2},
  {k:'aufnahme',n:'Aufnahme',g:'stationen',w:170,t:'text',mem:1,span:2},
- {k:'slot_aufnahme',n:'Slot Aufnahme',g:'stationen',w:115,t:'text',mem:1},
+ {k:'slot_aufnahme',n:'Slot Aufnahme',g:'stationen',w:115,t:'combo',empty:'– keine Zeit –',slots:1,mem:1},
  {k:'tourenplan_aufnahme',n:'Tourenplan Aufnahme',g:'stationen',w:130,t:'text',mem:1},
- {k:'gestellung',n:'Gestellung',g:'stationen',w:170,t:'text',mem:1,span:2},
- {k:'slot_gestellung',n:'Slot/Zeit Gestellung',g:'stationen',w:130,t:'text',mem:1},
+ {k:'gestellung',n:'Gestellung',g:'stationen',w:170,t:'text',span:2,cust:1},
+ {k:'gestellung_adresse',n:'Adresse Gestellung',g:'stationen',w:200,t:'text',span:2},
+ {k:'slot_gestellung',n:'Slot/Zeit Gestellung',g:'stationen',w:130,t:'combo',empty:'– keine Zeit –',slots:1,mem:1},
  {k:'ref_gestellung',n:'Referenz Gestellung',g:'stationen',w:130,t:'text',mem:1},
  {k:'leerdepot',n:'Leerdepot',g:'stationen',w:150,t:'text',mem:1,span:2},
- {k:'slot_leerdepot',n:'Slot Leerdepot',g:'stationen',w:115,t:'text',mem:1},
+ {k:'slot_leerdepot',n:'Slot Leerdepot',g:'stationen',w:115,t:'combo',empty:'– keine Zeit –',slots:1,mem:1},
  {k:'tourenplan_leerdepot',n:'Tourenplan Leerdepot',g:'stationen',w:130,t:'text',mem:1},
  {k:'container_nr',n:'Container-Nr.',g:'container',w:120,t:'text'},
  {k:'container_typ',n:'Containertyp',g:'container',w:100,t:'typ'},
@@ -2823,8 +2916,9 @@ const dpToday=()=>dpISO(new Date());
 const dpLD=d=>(d.lieferdatum||d.datum||'').slice(0,10);   // Fallback für Dashboard/Statistik
 
 // Einstellungen (aus /api/config)
-const DP_NEW_V3=['container_extra'];   // neue Felder: bei älteren gespeicherten Einstellungen automatisch an
-const dpNewOn=k=>DP_NEW_V3.includes(k)&&(dpCfg.ver||0)<3;
+const DP_NEW={container_extra:3,gestellung_adresse:4};   // neue Felder: bei älteren gespeicherten Einstellungen automatisch an
+const dpNewOn=k=>DP_NEW[k]&&(dpCfg.ver||0)<DP_NEW[k];
+const DP_SLOTS=(()=>{const a=[];for(let m=300;m<=1320;m+=30)a.push(String(Math.floor(m/60)).padStart(2,'0')+':'+(m%60?'30':'00'));return a})();
 const dpFormOn=k=>k==='nr'||(dpCfg.form?(dpCfg.form.includes(k)||dpNewOn(k)):true);
 const dpPdfOn=k=>dpCfg.pdf?(dpCfg.pdf.includes(k)||dpNewOn(k)):!['nr','einkaufspreis','verkaufspreis'].includes(k);
 const dpLines=v=>Array.isArray(v)?v.map(x=>String(x).trim()).filter(Boolean):null;
@@ -2969,8 +3063,20 @@ const dpSndOn=()=>lsGet('dispo_sound',true)!==false;
 function dpSndToggle(){lsSet('dispo_sound',!dpSndOn());dpSndBtn();if(dpSndOn())dpSound('save')}
 function dpSndBtn(){const b=document.getElementById('dp-snd');if(b)b.textContent=dpSndOn()?'🔊':'🔇'}
 function dpSound(kind){try{if(!dpSndOn())return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;dpAC=dpAC||new AC();if(dpAC.state==='suspended')dpAC.resume();
-  const seq=kind==='pdf'?[[523,0,.09],[784,.09,.09],[1047,.18,.16]]:[[659,0,.08],[880,.08,.08],[1319,.16,.14]];const t0=dpAC.currentTime+.01;
-  seq.forEach(([f,o,l])=>{const os=dpAC.createOscillator(),g=dpAC.createGain();os.type='square';os.frequency.setValueAtTime(f,t0+o);os.frequency.exponentialRampToValueAtTime(f*1.25,t0+o+l);g.gain.setValueAtTime(.0001,t0+o);g.gain.exponentialRampToValueAtTime(.07,t0+o+.01);g.gain.exponentialRampToValueAtTime(.0001,t0+o+l);os.connect(g);g.connect(dpAC.destination);os.start(t0+o);os.stop(t0+o+l+.02)})}catch(e){}}
+  const c=dpAC,t0=c.currentTime+.01,out=c.createGain();out.gain.value=.5;out.connect(c.destination);
+  if(kind==='pdf'){ // kurzer Pups: tiefes, wackeliges Sägezahn-Blubbern
+    const o=c.createOscillator(),g=c.createGain(),lfo=c.createOscillator(),lg=c.createGain(),f=c.createBiquadFilter();
+    o.type='sawtooth';o.frequency.setValueAtTime(120,t0);o.frequency.exponentialRampToValueAtTime(52,t0+.42);
+    lfo.type='square';lfo.frequency.setValueAtTime(34,t0);lfo.frequency.linearRampToValueAtTime(15,t0+.42);lg.gain.value=26;lfo.connect(lg);lg.connect(o.frequency);
+    f.type='lowpass';f.frequency.value=520;g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(.55,t0+.03);g.gain.setValueAtTime(.55,t0+.3);g.gain.exponentialRampToValueAtTime(.0001,t0+.45);
+    o.connect(f);f.connect(g);g.connect(out);o.start(t0);lfo.start(t0);o.stop(t0+.46);lfo.stop(t0+.46);
+  }else{ // Clownhupe: zweimal „tü-tüü“
+    [[0,.11,370,300],[.15,.2,440,330]].forEach(([o0,len,f0,f1])=>{const o=c.createOscillator(),o2=c.createOscillator(),g=c.createGain(),f=c.createBiquadFilter();
+      o.type='square';o2.type='sawtooth';f.type='bandpass';f.frequency.value=1100;f.Q.value=1.2;
+      [o,o2].forEach((x,i)=>{x.frequency.setValueAtTime(f0*(i?1.01:1),t0+o0);x.frequency.exponentialRampToValueAtTime(f1,t0+o0+len)});
+      g.gain.setValueAtTime(.0001,t0+o0);g.gain.exponentialRampToValueAtTime(.5,t0+o0+.015);g.gain.setValueAtTime(.5,t0+o0+len-.04);g.gain.exponentialRampToValueAtTime(.0001,t0+o0+len);
+      o.connect(f);o2.connect(f);f.connect(g);g.connect(out);o.start(t0+o0);o2.start(t0+o0);o.stop(t0+o0+len+.02);o2.stop(t0+o0+len+.02)});
+  }}catch(e){}}
 function dpSortBy(k){dpSort=dpSort.k===k?{k,d:-dpSort.d}:{k,d:1};dispoRender()}
 function dpToggleSel(id,c){c?dpSel.add(id):dpSel.delete(id);dispoRender()}
 function dpSelAll(c){dpFiltered().forEach(d=>c?dpSel.add(d.id):dpSel.delete(d.id));dispoRender()}
@@ -2996,12 +3102,32 @@ function dpInputHTML(f,id){
    case 'money':return `<input type="number" step="0.01" ${a}>`;
    case 'yn':return `<select ${a}><option value="nein">Nein</option><option value="ja">Ja</option></select>`;
    case 'typ':return `<select ${a}>${DP_TYPES.map(t=>`<option>${dpEsc(t)}</option>`).join('')}</select>`;
-   case 'combo':{const o=f.k==='status'?dpStatusOpts():dpVehOpts();return `<div class="dp-combo"><select id="${id}" autocomplete="off" onchange="dpComboChg('${id}')">${f.empty?`<option value="">${f.empty}</option>`:''}${o.map(t=>`<option>${dpEsc(t)}</option>`).join('')}<option value="__other__">Andere … (freie Eingabe)</option></select><input type="text" id="${id}__o" style="display:none" placeholder="Freie Eingabe"${f.mem?` list="dl-${f.k}"`:''}></div>`}
+   case 'combo':{const o=f.slots?DP_SLOTS:f.k==='status'?dpStatusOpts():dpVehOpts();return `<div class="dp-combo"><select id="${id}" autocomplete="off" onchange="dpComboChg('${id}')">${f.empty?`<option value="">${f.empty}</option>`:''}${o.map(t=>`<option>${dpEsc(t)}</option>`).join('')}<option value="__other__">Andere … (freie Eingabe)</option></select><input type="text" id="${id}__o" style="display:none" placeholder="Freie Eingabe"${f.mem?` list="dl-${f.k}"`:''}></div>`}
    case 'extra':return '';
    case 'area':return `<textarea ${a} rows="3"${f.mem?` list="dl-${f.k}"`:''}></textarea>`;
-   default:return `<input type="text" ${a}${f.mem?` list="dl-${f.k}"`:''}${DP_PH[f.k]?` placeholder="${DP_PH[f.k]}"`:''}>`;
+   default:if(f.cust&&id.startsWith('dp-')&&!id.startsWith('dp-bk'))return `<div class="dp-acw"><input type="text" ${a} placeholder="Kundennr. oder Anfangsbuchstaben …" oninput="dpCustAc(this)" onkeydown="dpCustKey(event)" onblur="setTimeout(dpCustHide,160)"><div class="ac-list dp-acl" id="dp-ac-cust"></div></div>`;
+     return `<input type="text" ${a}${f.mem?` list="dl-${f.k}"`:''}${DP_PH[f.k]?` placeholder="${DP_PH[f.k]}"`:''}>`;
   }
 }
+// Kunden-Autocomplete für „Gestellung“ (Kundennummer oder Anfangsbuchstaben → Firma + Adresse)
+let dpAcI=-1,dpAcL=[];
+const dpCustAddr=c=>[c.addr,[c.zip,c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+function dpCustAc(inp){const el=document.getElementById('dp-ac-cust');if(!el)return;const q=inp.value.trim().toLowerCase();
+  if(!q){dpCustHide();return}
+  const sc=c=>{const n=(c.name||'').toLowerCase(),k=(c.kdnr||'').toLowerCase(),kd=k.replace(/\D/g,'').replace(/^0+/,''),qd=q.replace(/^0+/,'');
+    if(k===q||(qd&&/^\d+$/.test(q)&&kd===qd))return 0;if(n.startsWith(q))return 1;if(k.startsWith(q)||(/^\d+$/.test(q)&&kd.startsWith(qd)))return 2;if(n.split(/[\s,.-]+/).some(w=>w.startsWith(q)))return 3;if(n.includes(q)||(c.city||'').toLowerCase().startsWith(q))return 4;return 9};
+  dpAcL=(typeof customers!=='undefined'?customers:[]).map(c=>({c,s:sc(c)})).filter(x=>x.s<9).sort((a,b)=>a.s-b.s||(a.c.name||'').localeCompare(b.c.name||'')).slice(0,8).map(x=>x.c);
+  const mem=(dpMem().gestellung||[]).filter(v=>v.toLowerCase().includes(q)&&!dpAcL.some(c=>(c.name||'')===v)).slice(0,Math.max(0,8-dpAcL.length));
+  if(!dpAcL.length&&!mem.length){dpCustHide();return}
+  dpAcI=0;
+  el.innerHTML=dpAcL.map((c,i)=>`<div class="ac-item${i===0?' on':''}" onmousedown="event.preventDefault();dpCustPick(${i})"><div class="ac-name"><b>${dpEsc(c.kdnr||'')}</b> · ${dpEsc(c.name||'')}</div><div class="ac-sub">${dpEsc(dpCustAddr(c))||'Keine Adresse hinterlegt'}</div></div>`).join('')
+   +mem.map(v=>`<div class="ac-item" onmousedown="event.preventDefault();document.getElementById('dp-gestellung').value=this.dataset.v;dpCustHide()" data-v="${dpEsc(v)}"><div class="ac-name">${dpEsc(v)}</div><div class="ac-sub">zuletzt verwendet</div></div>`).join('');
+  el.className='ac-list dp-acl show'}
+function dpCustHide(){const el=document.getElementById('dp-ac-cust');if(el)el.className='ac-list dp-acl';dpAcI=-1}
+function dpCustPick(i){const c=dpAcL[i];if(!c)return;document.getElementById('dp-gestellung').value=c.name||'';const a=document.getElementById('dp-gestellung_adresse');if(a)a.value=dpCustAddr(c);dpCustHide()}
+function dpCustKey(e){const el=document.getElementById('dp-ac-cust');if(!el||!el.classList.contains('show'))return;const it=[...el.querySelectorAll('.ac-item')];
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();dpAcI=(dpAcI+(e.key==='ArrowDown'?1:-1)+it.length)%it.length;it.forEach((x,i)=>x.classList.toggle('on',i===dpAcI))}
+  else if(e.key==='Enter'&&dpAcI>=0&&dpAcI<dpAcL.length){e.preventDefault();dpCustPick(dpAcI)}else if(e.key==='Escape')dpCustHide()}
 function dpComboChg(id){const s=document.getElementById(id),o=document.getElementById(id+'__o');if(!s||!o)return;const on=s.value==='__other__';o.style.display=on?'block':'none';if(on)o.focus()}
 function dpComboVal(id){const s=document.getElementById(id);if(!s)return'';if(s.value==='__other__'){const o=document.getElementById(id+'__o');return(o&&o.value||'').trim()}return s.value.trim()}
 function dpComboSet(id,v){const s=document.getElementById(id),o=document.getElementById(id+'__o');if(!s)return;v=v==null?'':String(v);
@@ -3148,9 +3274,9 @@ async function dpSettingsSave(){
   const get=id=>[...document.querySelectorAll('#'+id+' input[type=checkbox]')].filter(i=>i.checked).map(i=>i.value),msg=document.getElementById('dps-msg');
   const form=get('dps-form'),pdf=get('dps-pdf'),lines=id=>[...new Set(document.getElementById(id).value.split('\n').map(x=>x.trim()).filter(Boolean))],prefix=(document.getElementById('dps-prefix').value.trim()||'DISPO').replace(/[^\w\-\/.]/g,'').slice(0,20)||'DISPO';
   if(!form.includes('lieferdatum')&&!confirm('Das Feld „Lieferdatum“ ist abgewählt – der Tagesplan richtet sich nach dem Lieferdatum. Trotzdem speichern?'))return;
-  const r=await fetch('/api/config',{method:'POST',headers:J,body:JSON.stringify({dispo_form_fields:form,dispo_pdf_fields:pdf,dispo_status_options:lines('dps-status'),dispo_vehicle_options:lines('dps-veh'),dispo_prefix:prefix,dispo_fields_v:3})});
+  const r=await fetch('/api/config',{method:'POST',headers:J,body:JSON.stringify({dispo_form_fields:form,dispo_pdf_fields:pdf,dispo_status_options:lines('dps-status'),dispo_vehicle_options:lines('dps-veh'),dispo_prefix:prefix,dispo_fields_v:4})});
   const cv=parseInt((document.getElementById('dps-counter')||{}).value);if(cv>0){const rc=await fetch('/api/dispo/set-counter',{method:'POST',headers:J,body:JSON.stringify({counter:cv})});if(rc.ok)toast('Nächste Dispo-Nummer gesetzt','info')}
-  if(r.ok){dpCfg.form=form;dpCfg.pdf=pdf;dpCfg.status=lines('dps-status');dpCfg.veh=lines('dps-veh');dpCfg.prefix=prefix;dpCfg.ver=3;dpBulkInit();dispoRender();msg.style.color='#16a34a';msg.textContent='Gespeichert ✓';toast('Dispo-Einstellungen gespeichert ✓')}
+  if(r.ok){dpCfg.form=form;dpCfg.pdf=pdf;dpCfg.status=lines('dps-status');dpCfg.veh=lines('dps-veh');dpCfg.prefix=prefix;dpCfg.ver=4;dpBulkInit();dispoRender();msg.style.color='#16a34a';msg.textContent='Gespeichert ✓';toast('Dispo-Einstellungen gespeichert ✓')}
   else{msg.style.color='#dc2626';msg.textContent='Speichern nicht möglich (nur Administratoren)'}
 }
 
@@ -3165,6 +3291,90 @@ function dpDash(){
 window.dispoRender=dispoRender;window.dispoStatsRender=dispoStatsRender;
 (function(){const orig=loadAll;loadAll=async function(){await orig();await dispoLoad();if(document.getElementById('page-dispostats').classList.contains('active'))dispoStatsRender()}})();
 document.addEventListener('DOMContentLoaded',()=>{dpPreset('today')});
+
+// ═══ E-MAIL (Tagesplan / Aufträge aus der Dispo) ═══
+let mailK='plan',mailSel=new Set(),mailDirty={s:false,b:false},mailCfg={},mailT=null,mailDates={plan:['',''],orders:['','']},mailBusy=false;
+const mailEl=id=>document.getElementById(id);
+const mailEnc=encodeURIComponent;
+async function mailInit(opts){
+  opts=opts||{};
+  try{mailCfg=await (await fetch('/api/config')).json()}catch{mailCfg={}}
+  try{await dispoLoad()}catch(e){}
+  if(!opts.keep){mailDirty={s:false,b:false}}
+  if(!mailEl('ml-from').value&&mailK==='plan')mailEl('ml-from').value=dpToday();
+  const vs=[...new Set([...dpVehOpts(),...dispoData.map(d=>d.fahrzeug_nr).filter(Boolean)])].sort(),cur=mailEl('ml-veh').value;
+  mailEl('ml-veh').innerHTML='<option value="">Alle Fahrzeuge</option>'+vs.map(v=>`<option>${dpEsc(v)}</option>`).join('');mailEl('ml-veh').value=vs.includes(cur)?cur:'';
+  const rec=[...new Set([...(lsGet('mail_recipients',[])||[]),...((typeof customers!=='undefined'?customers:[]).map(c=>c.email).filter(Boolean))])];
+  mailEl('ml-dl').innerHTML=rec.map(r=>`<option value="${dpEsc(r)}">`).join('');
+  const ok=mailCfg.smtp_host&&(mailCfg.from_email||mailCfg.smtp_user),fi=mailEl('ml-from-info');
+  fi.className='ml-from'+(ok?'':' warn');
+  fi.innerHTML=ok?`Absender: <b>${dpEsc(mailCfg.from_name||'')} &lt;${dpEsc(mailCfg.from_email||mailCfg.smtp_user)}&gt;</b> · Server ${dpEsc(mailCfg.smtp_host)}`:`Noch kein Mail-Server eingerichtet – <a onclick="openSettings()">⚙ Einstellungen → E-Mail / SMTP</a> (Gmail, Outlook u. a. per Schnellauswahl). Ohne Server kannst du unten den Entwurf / Gmail / Outlook im Browser nutzen.`;
+  mailKindUI();mailRenderOrders();mailSrcChanged();mailLog();
+}
+function mailKindUI(){mailEl('ml-k-plan').classList.toggle('on',mailK==='plan');mailEl('ml-k-orders').classList.toggle('on',mailK==='orders');mailEl('ml-orders-box').style.display=mailK==='orders'?'block':'none'}
+function mailKind(k){if(k===mailK)return;mailDates[mailK]=[mailEl('ml-from').value,mailEl('ml-to').value];mailK=k;[mailEl('ml-from').value,mailEl('ml-to').value]=mailDates[k];
+  if(k==='plan'&&!mailEl('ml-from').value)mailEl('ml-from').value=dpToday();mailDirty={s:false,b:false};mailKindUI();mailRenderOrders();mailSrcChanged()}
+function mailPreset(p){const d=new Date();let a=new Date(d),b=null;if(p==='tomorrow')a.setDate(d.getDate()+1);
+  if(p==='week'){const wd=(d.getDay()+6)%7;a=new Date(d);a.setDate(d.getDate()-wd);b=new Date(a);b.setDate(a.getDate()+6)}
+  mailEl('ml-from').value=dpISO(a);mailEl('ml-to').value=b?dpISO(b):'';mailSrcChanged()}
+function mailVisibleOrders(){const fr=mailEl('ml-from').value,to=mailEl('ml-to').value||fr,veh=mailEl('ml-veh').value,q=(mailEl('ml-q').value||'').toLowerCase();
+  return dispoData.filter(d=>{const ld=(d.lieferdatum||'').slice(0,10);if(fr&&(!ld||ld<fr||ld>to))return false;if(veh&&d.fahrzeug_nr!==veh)return false;
+    if(q&&!Object.values(d).join(' ').toLowerCase().includes(q))return false;return true}).sort((a,b)=>String(a.lieferdatum||'').localeCompare(String(b.lieferdatum||''))||String(a.auftragsnr||a.nr).localeCompare(String(b.auftragsnr||b.nr)))}
+function mailRenderOrders(){const l=mailEl('ml-olist');if(!l)return;const v=mailVisibleOrders();
+  l.innerHTML=v.length?v.map(d=>`<div class="ml-orow" onclick="mailToggle('${d.id}')"><input type="checkbox" ${mailSel.has(d.id)?'checked':''} onclick="event.stopPropagation();mailToggle('${d.id}',this.checked)"><b>${dpEsc(d.auftragsnr||d.nr)}</b><span class="s">${dpEsc(d.gestellung||d.aufnahme||'–')}</span><span class="s">${dpEsc(d.fahrzeug_nr||'–')}</span><span class="s">${dpDate(d.lieferdatum)}</span></div>`).join(''):'<div style="padding:14px;font-size:12px;color:var(--text3)">Keine Aufträge für diese Filter</div>'}
+function mailToggle(id,c){(c===undefined?!mailSel.has(id):c)?mailSel.add(id):mailSel.delete(id);mailRenderOrders();mailSrcChanged()}
+function mailSelAll(c){mailVisibleOrders().forEach(d=>c?mailSel.add(d.id):mailSel.delete(d.id));mailRenderOrders();mailSrcChanged()}
+function mailPayload(){const p=mailK==='plan'?{kind:'plan',from:mailEl('ml-from').value||dpToday(),to:mailEl('ml-to').value||'',fahrzeug:mailEl('ml-veh').value}
+    :{kind:'orders',ids:[...mailSel],merge:(document.querySelector('input[name=ml-merge]:checked')||{}).value==='1'};
+  return {...p,recipients:mailEl('ml-to-addr').value.trim(),cc:mailEl('ml-cc').value.trim(),subject:mailEl('ml-subj').value,body:mailEl('ml-body').value}}
+function mailSig(){const c=mailCfg,n=c.from_name||c.company_name||'',co=c.company_name&&c.company_name!==n?c.company_name:'';
+  return ['Mit freundlichen Grüßen',n,co,[c.company_phone&&'Tel. '+c.company_phone,c.company_email].filter(Boolean).join(' · '),c.company_web].filter(Boolean).join('\n')}
+function mailTexts(n){let s,b;const veh=mailEl('ml-veh').value;
+  if(mailK==='plan'){const fr=mailEl('ml-from').value||dpToday(),to=mailEl('ml-to').value;let lbl;
+    if(to&&to!==fr)lbl=dpDate(fr)+' – '+dpDate(to);else{const wd=['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'][new Date(fr+'T12:00:00').getDay()];lbl=(wd||'')+', '+dpDate(fr)}
+    s='Tagesplan '+lbl+(veh?' – '+veh:'');b=`Guten Tag,\n\nanbei erhalten Sie den Tagesplan für ${lbl}${veh?' (Fahrzeug '+veh+')':''}.\n\nBei Rückfragen melden Sie sich gerne.\n\n`+mailSig()}
+  else{const sel=dispoData.filter(d=>mailSel.has(d.id));s=sel.length===1?'Transportauftrag '+(sel[0].auftragsnr||sel[0].nr):'Transportaufträge ('+(sel.length||0)+')';
+    b=`Guten Tag,\n\nanbei erhalten Sie ${sel.length===1?'den Transportauftrag':'die Transportaufträge'}${sel.length===1?' '+(sel[0].auftragsnr||sel[0].nr):''} als PDF.\n\nBei Rückfragen melden Sie sich gerne.\n\n`+mailSig()}
+  return [s,b]}
+function mailSrcChanged(){clearTimeout(mailT);mailT=setTimeout(mailRefresh,220);if(mailK==='orders')mailRenderOrders();
+  const [s,b]=mailTexts();if(!mailDirty.s)mailEl('ml-subj').value=s;if(!mailDirty.b)mailEl('ml-body').value=b}
+async function mailRefresh(){const box=mailEl('ml-attach');if(!box)return;
+  if(mailK==='orders'&&!mailSel.size){box.className='ml-attach warn';box.textContent='Bitte oben mindestens einen Auftrag auswählen.';return}
+  try{const r=await fetch('/api/dispo/email/prepare',{method:'POST',headers:J,body:JSON.stringify(mailPayload())}),j=await r.json();
+    if(!j.ok){box.className='ml-attach warn';box.textContent=j.message||'Fehler';return}
+    box.className='ml-attach';box.innerHTML='📎 <b>'+j.files.length+(j.files.length===1?' Anhang':' Anhänge')+'</b> · '+j.count+(j.count===1?' Auftrag':' Aufträge')+'<br>'+j.files.slice(0,6).map(f=>dpEsc(f.name)+' <span style="color:var(--text3)">('+f.kb+' KB)</span>').join('<br>')+(j.files.length>6?'<br>… +'+(j.files.length-6)+' weitere':'')}
+  catch(e){box.className='ml-attach warn';box.textContent='Anhang konnte nicht erstellt werden'}}
+function mailValidate(){const m=mailEl('ml-msg');if(m)m.textContent=''}
+function mailMsg(t,ok){const m=mailEl('ml-msg');m.style.color=ok?'#16a34a':'#dc2626';m.textContent=t}
+function mailRemember(){const a=mailEl('ml-to-addr').value.split(/[;,\s]+/).concat(mailEl('ml-cc').value.split(/[;,\s]+/)).filter(x=>/@/.test(x));
+  const old=lsGet('mail_recipients',[])||[];lsSet('mail_recipients',[...new Set([...a,...old])].slice(0,40))}
+async function mailSend(){if(mailBusy)return;const p=mailPayload();
+  if(!p.recipients){mailMsg('Bitte einen Empfänger eintragen','');mailEl('ml-to-addr').focus();return}
+  mailBusy=true;const b=mailEl('ml-send');b.disabled=true;b.textContent='Wird gesendet…';mailMsg('','');
+  try{const r=await fetch('/api/dispo/email/send',{method:'POST',headers:J,body:JSON.stringify(p)}),j=await r.json();
+    if(j.ok){mailMsg('✔ Gesendet an '+p.recipients,true);toast('E-Mail gesendet ✓');dpSound('save');mailRemember();mailLog()}
+    else mailMsg(j.message||'Senden fehlgeschlagen',false)}
+  catch(e){mailMsg('Server nicht erreichbar',false)}
+  b.disabled=false;b.textContent='✉ Jetzt senden';mailBusy=false}
+async function mailBlob(url){const r=await fetch(url,{method:'POST',headers:J,body:JSON.stringify(mailPayload())});
+  if(!r.ok){let m='Fehler';try{m=(await r.json()).message||m}catch{}return{ok:false,message:m}}
+  const cd=r.headers.get('Content-Disposition')||'',m=cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)/);return{ok:true,blob:await r.blob(),name:m?decodeURIComponent(m[1]):'download'}}
+function mailSave(x){const a=document.createElement('a');a.href=URL.createObjectURL(x.blob);a.download=x.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
+async function mailEml(){const x=await mailBlob('/api/dispo/email/eml');if(!x.ok){mailMsg(x.message,false);return}mailSave(x);dpSound('pdf');mailMsg('Entwurf heruntergeladen – Datei öffnen (Doppelklick), sie startet in Outlook / deinem Mail-Programm.',true)}
+async function mailDownload(){const x=await mailBlob('/api/dispo/email/attachments');if(!x.ok){mailMsg(x.message,false);return}mailSave(x);dpSound('pdf');mailMsg('Anhang heruntergeladen',true)}
+async function mailWeb(kind){const w=window.open('about:blank','_blank');const x=await mailBlob('/api/dispo/email/attachments');
+  if(!x.ok){if(w)w.close();mailMsg(x.message,false);return}mailSave(x);
+  const p=mailPayload(),body=p.body.slice(0,1800),to=mailEnc(p.recipients.replace(/[;\s]+/g,',')),cc=mailEnc(p.cc.replace(/[;\s]+/g,','));
+  const u={gmail:`https://mail.google.com/mail/?view=cm&fs=1&to=${to}&cc=${cc}&su=${mailEnc(p.subject)}&body=${mailEnc(body)}`,
+    o365:`https://outlook.office.com/mail/deeplink/compose?to=${to}&cc=${cc}&subject=${mailEnc(p.subject)}&body=${mailEnc(body)}`,
+    live:`https://outlook.live.com/mail/0/deeplink/compose?to=${to}&cc=${cc}&subject=${mailEnc(p.subject)}&body=${mailEnc(body)}`}[kind];
+  if(w)w.location.href=u;else window.open(u,'_blank');mailMsg('Anhang heruntergeladen – bitte in die geöffnete Mail ziehen.',true);dpSound('pdf')}
+async function mailLog(){try{const l=await (await fetch('/api/dispo/email/log')).json(),el=mailEl('ml-log');
+  el.innerHTML=l.length?l.map(x=>`<div><b>${new Date(x.at).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</b><span>${dpEsc(x.to)}</span>${dpEsc(x.subject)}<span>· ${x.files.length} Anhang</span></div>`).join(''):'Noch nichts gesendet'}catch{}}
+// Einstiege aus der Dispo
+function mailFromSelection(){if(!dpSel.size){toast('Bitte erst links Aufträge ankreuzen','err');return}mailSel=new Set(dpSel);mailK='orders';mailDates.orders=['',''];mailEl('ml-from').value='';mailEl('ml-to').value='';showPage('email')}
+function mailFromPlan(){mailK='plan';mailDates.plan=[mailEl('ml-from').value,mailEl('ml-to').value];
+  mailEl('ml-from').value=mailEl('dp-plan-from').value||dpToday();mailEl('ml-to').value=mailEl('dp-plan-to').value||'';mailEl('ml-veh').value=(mailEl('dp-plan-veh')||{}).value||'';showPage('email')}
 
 </script>
 </body>
