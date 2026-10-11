@@ -1158,7 +1158,7 @@ DISPO_FIELDS = [
 DISPO_KEYS = [f[0] for f in DISPO_FIELDS]
 DISPO_LABEL = {f[0]: f[1] for f in DISPO_FIELDS}
 DISPO_PDF_DEFAULT = [k for k in DISPO_KEYS if k not in ('nr', 'einkaufspreis', 'verkaufspreis')]
-DISPO_STATUS = {'offen': 'Offen', 'in_fahrt': 'In Fahrt', 'erledigt': 'Erledigt', 'storniert': 'Storniert'}
+DISPO_STATUS = {'offen': 'Offen', 'bestaetigt': 'Bestätigt', 'in_fahrt': 'In Fahrt', 'erledigt': 'Erledigt', 'abgelehnt': 'Abgelehnt', 'storniert': 'Storniert'}
 DISPO_BULK_FIELDS = [k for k in DISPO_KEYS if k not in ('nr', 'container_extra')]
 NEW_FIELDS = {'container_extra': 3, 'gestellung_adresse': 4, 'aufnahme_adresse': 5, 'leerdepot_adresse': 5}   # Feld -> Version, ab der es bekannt ist (ältere Einstellungen bekommen es automatisch)
 
