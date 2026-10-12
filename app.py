@@ -1131,6 +1131,7 @@ DISPO_FIELDS = [
     ('auftragsnr', 'Auftragsnummer', 'termine'),
     ('datum', 'Datum', 'termine'),
     ('lieferdatum', 'Lieferdatum', 'termine'),
+    ('kunde', 'Kunde', 'termine'),
     ('fahrzeug_nr', 'Fahrzeug-Nr.', 'termine'),
     ('status', 'Status', 'termine'),
     ('aufnahme', 'Aufnahme', 'stationen'),
@@ -1160,7 +1161,7 @@ DISPO_LABEL = {f[0]: f[1] for f in DISPO_FIELDS}
 DISPO_PDF_DEFAULT = [k for k in DISPO_KEYS if k not in ('nr', 'einkaufspreis', 'verkaufspreis')]
 DISPO_STATUS = {'offen': 'Offen', 'bestaetigt': 'Bestätigt', 'in_fahrt': 'In Fahrt', 'erledigt': 'Erledigt', 'abgelehnt': 'Abgelehnt', 'storniert': 'Storniert'}
 DISPO_BULK_FIELDS = [k for k in DISPO_KEYS if k not in ('nr', 'container_extra')]
-NEW_FIELDS = {'container_extra': 3, 'gestellung_adresse': 4, 'aufnahme_adresse': 5, 'leerdepot_adresse': 5}   # Feld -> Version, ab der es bekannt ist (ältere Einstellungen bekommen es automatisch)
+NEW_FIELDS = {'container_extra': 3, 'gestellung_adresse': 4, 'aufnahme_adresse': 5, 'leerdepot_adresse': 5, 'kunde': 6}   # Feld -> Version, ab der es bekannt ist (ältere Einstellungen bekommen es automatisch)
 
 def _extras(d):
     """Weitere Container als [(nr, typ)] – akzeptiert Liste oder CSV-Text 'NR:TYP | NR:TYP'"""
@@ -1463,6 +1464,7 @@ def _plan_columns(sel):
             c.append((k, _HEAD.get(k, DISPO_LABEL[k]), w, g, fn or (lambda d, k=k: _e(d.get(k)) or '-')))
     simple('auftragsnr', 2.5); simple('nr', 2.5)
     simple('lieferdatum', 2.1, lambda d: _fd(d.get('lieferdatum'))); simple('datum', 1.8, lambda d: _fd(d.get('datum')))
+    simple('kunde', 2.4)
     simple('fahrzeug_nr', 2.0)
     if sel & {'container_nr', 'container_typ', 'anzahl_container', 'container_extra'}:
         c.append(('container', 'Container', 3.3, 'container', lambda d: _container_html(d, sel)))
@@ -1544,7 +1546,7 @@ def _order_story(d, cfg, s, W):
     F = lambda k, v=None: (DISPO_LABEL[k], v if v is not None else (_e(d.get(k)) or '-'))
     yn = lambda v: 'Ja' if str(v).lower() in ('ja', 'true', '1') else 'Nein'
     termine = []
-    for k in ('auftragsnr', 'nr', 'lieferdatum', 'datum', 'fahrzeug_nr', 'status'):
+    for k in ('auftragsnr', 'nr', 'lieferdatum', 'datum', 'kunde', 'fahrzeug_nr', 'status'):
         if k in sel:
             v = _fd(d.get(k)) if k in ('lieferdatum', 'datum') else (_e(DISPO_STATUS.get(d.get('status'), d.get('status'))) or '-') if k == 'status' else None
             termine.append(F(k, v))
