@@ -459,6 +459,12 @@ table.dp td.c0:last-child{overflow:visible}
 .ds-t thead tr:nth-child(2) th{white-space:normal;min-width:70px}
 th.r{text-align:right}
 
+#ds-kpis{gap:10px;margin-bottom:14px}
+#ds-kpis .dp-kpi{padding:9px 14px;border-radius:11px}
+#ds-kpis .dp-kpi .v{font-size:19px}
+#ds-kpis .dp-kpi .l{font-size:9px;margin-top:3px}
+#ds-kpis .dp-kpi::after{width:56px;height:56px;top:-16px;right:-16px}
+
 </style>
 </head>
 <body>
@@ -3368,17 +3374,17 @@ function dsVToggle(i){const k=i<0?'__weitere__':dsVeh()[i];dsVSel.has(k)?dsVSel.
 // Summen je Fahrzeug im Zeitraum von/bis (nur gewählte Fahrzeuge)
 function dsSums(){
   const l=dispoData.filter(d=>dsInRange(dpLD(d))&&dsShow(d.fahrzeug_nr||'–'));
-  const v={};const get=k=>v[k]=v[k]||{n:0,c:0,r:0,e:0,p:0,x:0};
+  const v={};const get=k=>v[k]=v[k]||{n:0,c:0,r:0,e:0,p:0,x:0,pc:0};
   dsVeh().filter(dsShow).forEach(k=>get(k));
   l.forEach(d=>{const x=get(d.fahrzeug_nr||'–');x.n++;x.c+=parseInt(d.anzahl_container)||1;x.r+=dpNum(d.verkaufspreis);x.e+=dpNum(d.einkaufspreis)});
-  Object.keys(dsRates).filter(dsShow).forEach(k=>{Object.entries(dsRates[k]).forEach(([day,val])=>{if(dsInRange(day))get(k).p+=dpNum(val)})});
+  Object.keys(dsRates).filter(dsShow).forEach(k=>{Object.entries(dsRates[k]).forEach(([day,val])=>{if(dsInRange(day)){get(k).p+=dpNum(val);get(k).pc++}})});
   Object.keys(dsInfo).filter(dsShow).forEach(k=>{Object.entries(dsInfo[k]).forEach(([day,o])=>{if(dsInRange(day)&&o&&o.extra!=null)get(k).x+=dpNum(o.extra)})});
   return{l,v};
 }
-const dsTot=rows=>rows.reduce((a,x)=>({n:a.n+x.n,c:a.c+x.c,r:a.r+x.r,e:a.e+x.e,p:a.p+x.p,x:a.x+x.x}),{n:0,c:0,r:0,e:0,p:0,x:0});
+const dsTot=rows=>rows.reduce((a,x)=>({n:a.n+x.n,c:a.c+x.c,r:a.r+x.r,e:a.e+x.e,p:a.p+x.p,x:a.x+x.x,pc:a.pc+(x.pc||0)}),{n:0,c:0,r:0,e:0,p:0,x:0,pc:0});
 function dsKpis(){
   const{l,v}=dsSums();const T=dsTot(Object.values(v)),g=T.r+T.x,m=g-T.e-T.p;
-  document.getElementById('ds-kpis').innerHTML=[['k-blue',l.length,'Aufträge · '+T.c+' Cont.'],['k-green',eur(g),'Gesamtumsatz'+(T.x?' (inkl. '+eur(T.x)+' weitere)':'')],['k-amber',eur(T.e),'Einkauf'],['k-teal',eur(T.p),'Tagespauschalen'],['k-purple',eur(m),'Marge'+(g?` (${(m/g*100).toFixed(0)} %)`:'')]].map(([c,x,t])=>`<div class="dp-kpi ${c}"><div class="v">${x}</div><div class="l">${t}</div></div>`).join('');
+  document.getElementById('ds-kpis').innerHTML=[['k-blue',l.length,'Aufträge · '+T.c+' Cont.'],['k-green',eur(g),'Gesamtumsatz'+(T.x?' (inkl. '+eur(T.x)+' weitere)':'')],['k-teal',eur(T.p),'Tagespauschalen'],['k-amber',eur(T.pc?T.p/T.pc:0),'Ø Tagespauschale'+(T.pc?' · '+T.pc+' Einträge':'')],['k-purple',eur(m),'Marge'+(g?` (${(m/g*100).toFixed(0)} %)`:'')]].map(([c,x,t])=>`<div class="dp-kpi ${c}"><div class="v">${x}</div><div class="l">${t}</div></div>`).join('');
 }
 function dsSummary(){
   const{v}=dsSums();const rows=Object.entries(v).sort((a,b)=>(dsVeh().includes(b[0])-dsVeh().includes(a[0]))||(b[1].r+b[1].x)-(a[1].r+a[1].x));
