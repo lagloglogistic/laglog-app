@@ -465,6 +465,12 @@ th.r{text-align:right}
 #ds-kpis .dp-kpi .l{font-size:9px;margin-top:3px}
 #ds-kpis .dp-kpi::after{width:56px;height:56px;top:-16px;right:-16px}
 
+.ds-go{width:22px;height:22px;padding:0;border-radius:50%;border:1.5px solid #0e7490;background:#fff;color:#0e7490;font-size:15px;font-weight:700;line-height:18px;cursor:pointer;transition:all .15s;font-family:inherit}
+.ds-go:hover{background:#0e7490;color:#fff;transform:scale(1.15)}
+.ds-go.has{background:#0e7490;color:#fff}
+.ds-go.has:hover{background:#0891b2;border-color:#0891b2}
+.ds-go:not(.has){opacity:.55}
+
 </style>
 </head>
 <body>
@@ -3407,12 +3413,12 @@ function dsDaily(){
   document.getElementById('ds-title').textContent='Tagesübersicht je Fahrzeug · '+days.length+' Tage';
   if(!vs.length){document.getElementById('ds-daily').innerHTML='<div style="padding:22px;text-align:center;color:var(--text3);font-size:13px">Kein Standard-Fahrzeug ausgewählt (Auswahl „Weitere“ wirkt nur auf die Zusammenfassung unten).</div>';return}
   let h1='<tr><th rowspan="2" class="ds-d">Datum</th>',h2='<tr>';
-  vs.forEach(({v,i})=>{h1+=`<th colspan="${dsVCols}" class="vb vc${i%4}">${dpEsc(v)} <button class="ds-fill" title="Tagespauschale für alle leeren Tage dieser Tabelle eintragen" onclick="dsFill(${i})">⤓</button></th>`;h2+=`<th class="vb">Tages&shy;pauschale €</th><th>Aufträge</th><th>Umsatz</th><th>Weitere Umsätze €</th><th>Gesamt&shy;umsatz</th><th>Marge</th><th>Notiz</th>`});
+  vs.forEach(({v,i})=>{h1+=`<th colspan="${dsVCols}" class="vb vc${i%4}">${dpEsc(v)} <button class="ds-fill" title="Tagespauschale für alle leeren Tage dieser Tabelle eintragen" onclick="dsFill(${i})">⤓</button></th>`;h2+=`<th class="vb" title="Aufträge dieses Tages im Dispo-Tool anzeigen"></th><th>Tages&shy;pauschale €</th><th>Umsatz</th><th>Weitere Umsätze €</th><th>Gesamt&shy;umsatz</th><th>Marge</th><th>Notiz</th>`});
   const body=days.map(day=>{
     const wd=dsWd(day),cls=(wd==='Sa'||wd==='So'?'we ':'')+(day===today?'td':'');
     return `<tr class="${cls}"><td class="ds-d"><b>${wd}</b> ${dpDate(day).slice(0,6)}${day.slice(0,4)!==today.slice(0,4)?day.slice(0,4):''}</td>`+vs.map(({v,i})=>{
       const c=dsCell(v,day),raw=(dsRates[v]||{})[day],xr=(((dsInfo[v]||{})[day])||{}).extra;
-      return `<td class="vb"><input class="ds-rate" inputmode="decimal" placeholder="–" data-v="${dpEsc(v)}" data-d="${day}" value="${raw!==undefined?dsMoney(raw):''}" onchange="dsRateSet(this)"></td><td>${c.n||''}</td><td class="r">${c.r?eur(c.r):''}</td><td><input class="ds-rate" inputmode="decimal" placeholder="–" data-v="${dpEsc(v)}" data-d="${day}" value="${xr!==undefined?dsMoney(xr):''}" onchange="dsXSet(this)"></td><td class="r" id="dsg-${i}-${day}">${c.g?eur(c.g):''}</td><td class="r" id="dsm-${i}-${day}"${dsNeg(c.m)}>${c.has?eur(c.m):''}</td><td><input class="ds-note" placeholder="Notiz" data-v="${dpEsc(v)}" data-d="${day}" value="${dpEsc(dsNote(v,day))}" maxlength="500" onchange="dsNoteSet(this)"></td>`}).join('')+'</tr>';
+      return `<td class="vb"><button class="ds-go${c.n?' has':''}" data-v="${dpEsc(v)}" data-d="${day}" title="${c.n?c.n+(c.n===1?' Auftrag':' Aufträge')+' – im Dispo-Tool anzeigen':'Im Dispo-Tool anzeigen (keine Aufträge)'}" onclick="dsGo(this)">›</button></td><td><input class="ds-rate" inputmode="decimal" placeholder="–" data-v="${dpEsc(v)}" data-d="${day}" value="${raw!==undefined?dsMoney(raw):''}" onchange="dsRateSet(this)"></td><td class="r">${c.r?eur(c.r):''}</td><td><input class="ds-rate" inputmode="decimal" placeholder="–" data-v="${dpEsc(v)}" data-d="${day}" value="${xr!==undefined?dsMoney(xr):''}" onchange="dsXSet(this)"></td><td class="r" id="dsg-${i}-${day}">${c.g?eur(c.g):''}</td><td class="r" id="dsm-${i}-${day}"${dsNeg(c.m)}>${c.has?eur(c.m):''}</td><td><input class="ds-note" placeholder="Notiz" data-v="${dpEsc(v)}" data-d="${day}" value="${dpEsc(dsNote(v,day))}" maxlength="500" onchange="dsNoteSet(this)"></td>`}).join('')+'</tr>';
   }).join('');
   document.getElementById('ds-daily').innerHTML=`<table class="ds-t"><thead>${h1}</tr>${h2}</tr></thead><tbody>${body}</tbody><tfoot id="ds-foot"></tfoot></table>`;
   dsFoot();
@@ -3421,7 +3427,14 @@ function dsFoot(){
   const el=document.getElementById('ds-foot');if(!el)return;
   const days=dsDays();
   el.innerHTML='<tr class="ds-sum"><td class="ds-d">Summe '+days.length+' Tage</td>'+dsVeh().filter(dsShow).map(v=>{const T=days.reduce((a,d)=>{const c=dsCell(v,d);return{n:a.n+c.n,r:a.r+c.r,x:a.x+c.x,g:a.g+c.g,m:a.m+c.m,p:a.p+c.p}},{n:0,r:0,x:0,g:0,m:0,p:0});
-    return `<td class="vb r">${eur(T.p)}</td><td>${T.n}</td><td class="r">${eur(T.r)}</td><td class="r">${eur(T.x)}</td><td class="r">${eur(T.g)}</td><td class="r"${dsNeg(T.m)}>${eur(T.m)}</td><td></td>`}).join('')+'</tr>';
+    return `<td class="vb"></td><td class="r">${eur(T.p)}</td><td class="r">${eur(T.r)}</td><td class="r">${eur(T.x)}</td><td class="r">${eur(T.g)}</td><td class="r"${dsNeg(T.m)}>${eur(T.m)}</td><td></td>`}).join('')+'</tr>';
+}
+function dsGo(btn){
+  const v=btn.dataset.v,d=btn.dataset.d;
+  dpVhSel.clear();dpStSel.clear();if(dsVeh().includes(v))dpVhSel.add(v);
+  ['dp-q'].forEach(i=>{const e=document.getElementById(i);if(e)e.value=''});
+  document.getElementById('dp-f-from').value=d;document.getElementById('dp-f-to').value=d;
+  showPage('dispo');dispoRender();window.scrollTo({top:0,behavior:'smooth'});
 }
 function dsRefreshRow(v,d){
   const i=dsVeh().indexOf(v),c=dsCell(v,d),m=document.getElementById(`dsm-${i}-${d}`),g=document.getElementById(`dsg-${i}-${d}`);
