@@ -448,6 +448,11 @@ table.dp td.c0:last-child{overflow:visible}
 #dp-kpis{display:flex;justify-content:center;flex-wrap:wrap;gap:14px}
 #dp-kpis .dp-kpi{flex:0 1 270px;min-width:200px}
 
+.dp-chipcol{display:flex;flex-direction:column;gap:8px;flex:1 1 420px;min-width:0}
+.dp-chiprow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dp-chipcap{min-width:62px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#94a3b8}
+.page{padding-bottom:110px}
+
 </style>
 </head>
 <body>
@@ -651,14 +656,16 @@ table.dp td.c0:last-child{overflow:visible}
   <div class="dp-kpis" id="dp-kpis"></div>
   <div class="dp-bar">
     <input type="text" id="dp-q" placeholder="🔍 Suche…" oninput="dispoRender()" style="min-width:170px">
-    <select id="dp-f-veh" onchange="dispoRender()"><option value="">Alle Fahrzeuge</option></select>
     <label style="font-size:11px;color:var(--text3)">Lieferdatum von</label><input type="date" id="dp-f-from" onchange="dispoRender()">
     <label style="font-size:11px;color:var(--text3)">bis</label><input type="date" id="dp-f-to" onchange="dispoRender()">
     <button class="btn btn-sm btn-ghost" onclick="dispoResetFilters()">✕ Filter zurücksetzen</button>
     <button class="btn btn-sm btn-ghost" onclick="dispoResetWidths()">↺ Spaltenbreiten</button>
   </div>
   <div class="dp-rowtools">
-    <div class="dp-chips" id="dp-chips"></div>
+    <div class="dp-chipcol">
+      <div class="dp-chiprow"><span class="dp-chipcap">Status</span><div class="dp-chips" id="dp-chips"></div></div>
+      <div class="dp-chiprow"><span class="dp-chipcap">Fahrzeug</span><div class="dp-chips" id="dp-vchips"></div></div>
+    </div>
     <div class="dp-tools"><span class="dp-cap2">🗂 Tabelle &amp; Daten</span>
       <button class="btn btn-sm btn-ghost" onclick="dispoToggleCols(event)">⊞ Spalten</button>
       <button class="btn btn-sm btn-ghost" onclick="document.getElementById('dp-import').click()">⬆ CSV-Import</button>
@@ -2915,7 +2922,7 @@ initAuth().then(async ()=>{
 });
 
 // ═══ DISPO MODULE ═══
-let dispoData=[],dpEditId=null,dpSel=new Set(),dpStSel=new Set(),dpThT=null,dpSort={k:'lieferdatum',d:-1},dpCfg={form:null,pdf:null,status:[],veh:['LKW1','LKW2','LKW3'],prefix:'DISPO',ver:0},dpDragK=null;
+let dispoData=[],dpEditId=null,dpSel=new Set(),dpStSel=new Set(),dpVhSel=new Set(),dpThT=null,dpSort={k:'lieferdatum',d:-1},dpCfg={form:null,pdf:null,status:[],veh:['LKW1','LKW2','LKW3'],prefix:'DISPO',ver:0},dpDragK=null;
 const DP_G={termine:{n:'Termine & Fahrzeug',c:'#0e7490',bg:'#ecfeff'},stationen:{n:'Stationen',c:'#7c3aed',bg:'#f5f3ff'},container:{n:'Container & Reederei',c:'#d97706',bg:'#fffbeb'},finanzen:{n:'Finanzen',c:'#059669',bg:'#ecfdf5'},anmerkung:{n:'Anmerkung',c:'#db2777',bg:'#fdf2f8'}};
 const DP_TYPES=['20\' DV','40\' DV','40\' HC','45\' HC','20\' Reefer','40\' Reefer HC','20\' Open Top','40\' Open Top','20\' Flat Rack','40\' Flat Rack','20\' Tank','Sonstige'];
 const DP_ST={offen:'Offen',bestaetigt:'Bestätigt',in_fahrt:'In Fahrt',erledigt:'Erledigt',abgelehnt:'Abgelehnt',storniert:'Storniert'};
@@ -3031,11 +3038,11 @@ function dpBuildDatalists(){
 
 // Filter (Datum = Lieferdatum)
 function dpFiltered(){
-  const g=id=>document.getElementById(id).value,q=g('dp-q').toLowerCase(),veh=g('dp-f-veh'),fr=g('dp-f-from'),to=g('dp-f-to');
+  const g=id=>document.getElementById(id).value,q=g('dp-q').toLowerCase(),fr=g('dp-f-from'),to=g('dp-f-to');
   let l=dispoData.filter(d=>{
     const ld=(d.lieferdatum||'').slice(0,10);
     if(dpStSel.size){const k=d.status||'offen';if(!dpStSel.has(DP_ST[k]?k:'andere'))return false}
-    if(veh&&d.fahrzeug_nr!==veh)return false;
+    if(dpVhSel.size&&!dpVhSel.has(dpVhKey(d)))return false;
     if((fr||to)&&!ld)return false;if(fr&&ld<fr)return false;if(to&&ld>to)return false;
     if(q&&!Object.values(d).join(' ').toLowerCase().includes(q))return false;
     return true;
@@ -3058,12 +3065,13 @@ function dpCell(d,k){
 function dispoRender(){
   if(!document.getElementById('dp-table'))return;
   dpSndBtn();
-  dpFillSelect('dp-f-veh',[...new Set([...dpVehOpts(),...dispoData.map(d=>d.fahrzeug_nr).filter(Boolean)])].sort());
   const pv=document.getElementById('dp-plan-veh');
   if(pv){const cur=pv.value,vs=[...new Set([...dpVehOpts(),...dispoData.map(d=>d.fahrzeug_nr).filter(Boolean)])].sort();pv.innerHTML='<option value="">Alle Fahrzeuge</option>'+vs.map(v=>`<option>${dpEsc(v)}</option>`).join('');pv.value=vs.includes(cur)?cur:''}
   const stKey=d=>{const k=d.status||'offen';return DP_ST[k]?k:'andere'};
   const chip=(k,l,c,n)=>`<span class="dp-chip ${dpStSel.has(k)?'on':''}" style="--c:${c}" onclick="dpStToggle('${k}')">${l} <b>${n}</b></span>`;
   document.getElementById('dp-chips').innerHTML=`<span class="dp-chip ${dpStSel.size===0?'on':''}" onclick="dpStSel.clear();dispoRender()">Alle <b>${dispoData.length}</b></span>`+Object.keys(DP_ST).map(k=>chip(k,DP_ST[k],dpStColor(k),dispoData.filter(d=>stKey(d)===k).length)).join('')+chip('andere','Andere','#7c3aed',dispoData.filter(d=>stKey(d)==='andere').length);
+  const vchip=(i,l,k,c)=>`<span class="dp-chip ${dpVhSel.has(k)?'on':''}" style="--c:${c}" onclick="dpVhToggle(${i})">${dpEsc(l)} <b>${dispoData.filter(d=>dpVhKey(d)===k).length}</b></span>`;
+  document.getElementById('dp-vchips').innerHTML=`<span class="dp-chip ${dpVhSel.size===0?'on':''}" onclick="dpVhSel.clear();dispoRender()">Alle <b>${dispoData.length}</b></span>`+dpCfg.veh.map((v,i)=>vchip(i,v,v,'#0e7490')).join('')+vchip(-1,'Weitere','__weitere__','#64748b');
   const list=dpFiltered(),W=dpWidths(),cols=dpLayout().filter(x=>x.v).map(x=>DP_F[x.k]);
   document.getElementById('dp-lbl').textContent=`${list.length} von ${dispoData.length} Aufträgen · Doppelklick auf eine Zeile = bearbeiten`;
   const today=dpToday(),tn=dispoData.filter(d=>(d.lieferdatum||'').slice(0,10)===today);
@@ -3087,6 +3095,8 @@ function dispoRender(){
   document.getElementById('dp-table').innerHTML=`<table class="dp" style="width:${tw}px"><colgroup><col style="width:34px">${cw.map(w=>`<col style="width:${w}px">`).join('')}<col style="width:${AW}px"></colgroup><thead>${band}<tr class="ghead"><th style="width:34px;cursor:default"><input type="checkbox" id="dp-all" ${allSel?'checked':''} onchange="dpSelAll(this.checked)" title="Alle auswählen / Auswahl aufheben"></th>${th}<th data-k="_act" style="width:${AW}px" ondblclick="dpThDbl('_act')" title="Doppelklick = Breite automatisch anpassen">Aktionen<button class="fitb" onclick="event.stopPropagation();dpFitAll()" title="Alle Spalten an die Fensterbreite anpassen (nichts mehr seitlich scrollen)">⇔</button><span class="rz" onmousedown="dpResizeStart(event,'_act')" onclick="event.stopPropagation()"></span></th></tr></thead><tbody>${rows}</tbody></table>`;
   const ha=document.getElementById('dp-all');if(ha)ha.indeterminate=someSel&&!allSel;
 }
+const dpVhKey=d=>dpCfg.veh.includes(d.fahrzeug_nr)?d.fahrzeug_nr:'__weitere__';
+function dpVhToggle(i){const k=i<0?'__weitere__':dpCfg.veh[i];dpVhSel.has(k)?dpVhSel.delete(k):dpVhSel.add(k);dispoRender()}
 function dpStToggle(k){dpStSel.has(k)?dpStSel.delete(k):dpStSel.add(k);dispoRender()}
 function dpThClick(k){clearTimeout(dpThT);dpThT=setTimeout(()=>dpSortBy(k),240)}
 function dpThDbl(k){clearTimeout(dpThT);dpAutoFit(k)}
@@ -3147,7 +3157,7 @@ function dpSortBy(k){dpSort=dpSort.k===k?{k,d:-dpSort.d}:{k,d:1};dispoRender()}
 function dpToggleSel(id,c){c?dpSel.add(id):dpSel.delete(id);dispoRender()}
 function dpSelAll(c){dpFiltered().forEach(d=>c?dpSel.add(d.id):dpSel.delete(d.id));dispoRender()}
 function dispoClearSel(){dpSel.clear();dispoRender()}
-function dispoResetFilters(){['dp-q','dp-f-veh','dp-f-from','dp-f-to'].forEach(i=>document.getElementById(i).value='');dpStSel.clear();dispoRender()}
+function dispoResetFilters(){['dp-q','dp-f-from','dp-f-to'].forEach(i=>document.getElementById(i).value='');dpStSel.clear();dpVhSel.clear();dispoRender()}
 function dpResizeStart(e,k){
   e.preventDefault();e.stopPropagation();
   const th=e.target.parentElement,sx=e.clientX,sw=th.offsetWidth,h=e.target;h.classList.add('act');
