@@ -1373,6 +1373,41 @@ def set_dispo_rates():
     save_db(db)
     return jsonify({'ok': True, 'rates': rates})
 
+
+# ── Tagesinfos je Fahrzeug: weitere Umsätze + Notiz (Dispo-Statistik) ──
+@app.route('/api/dispo/dayinfo', methods=['GET'])
+@login_required
+def get_dispo_dayinfo():
+    return jsonify(load_db().get('dispo_dayinfo', {}))
+
+@app.route('/api/dispo/dayinfo', methods=['POST'])
+@login_required
+def set_dispo_dayinfo():
+    import re as _re
+    data = request.json or {}
+    veh = str(data.get('vehicle', '')).strip()
+    entries = data.get('entries') or {}
+    if not veh or not isinstance(entries, dict):
+        return jsonify({'ok': False, 'message': 'Fahrzeug fehlt'}), 400
+    db = load_db(); info = db.setdefault('dispo_dayinfo', {}); vi = info.setdefault(veh, {})
+    for day, upd in entries.items():
+        if not _re.match(r'^\d{4}-\d{2}-\d{2}$', str(day)) or not isinstance(upd, dict): continue
+        e = vi.setdefault(day, {})
+        if 'extra' in upd:
+            v = upd['extra']
+            if v is None or str(v).strip() == '': e.pop('extra', None)
+            else:
+                try: e['extra'] = round(float(str(v).replace(',', '.')), 2)
+                except ValueError: pass
+        if 'note' in upd:
+            t = str(upd['note'] or '').strip()[:500]
+            if t: e['note'] = t
+            else: e.pop('note', None)
+        if not e: vi.pop(day, None)
+    if not vi: info.pop(veh, None)
+    save_db(db)
+    return jsonify({'ok': True, 'info': info})
+
 # ── Dispo PDFs (Querformat, Felder per Einstellung) ───────
 from xml.sax.saxutils import escape as _xesc
 _DARK = colors.HexColor('#1a2e4a'); _BLUE = colors.HexColor('#2563a8')
