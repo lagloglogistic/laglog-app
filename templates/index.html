@@ -3067,7 +3067,7 @@ function dispoRender(){
   document.getElementById('dp-lbl').textContent=`${list.length} von ${dispoData.length} Aufträgen · Doppelklick auf eine Zeile = bearbeiten`;
   const today=dpToday(),tn=dispoData.filter(d=>(d.lieferdatum||'').slice(0,10)===today);
   const rev=list.reduce((a,d)=>a+dpNum(d.verkaufspreis),0),cost=list.reduce((a,d)=>a+dpNum(d.einkaufspreis),0);
-  document.getElementById('dp-kpis').innerHTML=[['k-teal',tn.length,'Lieferung heute'],['k-blue',list.length,'Aufträge (Filter)'],['k-purple',eur(rev-cost),'Marge']].map(([c,v,l])=>`<div class="dp-kpi ${c}"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+  document.getElementById('dp-kpis').innerHTML=[['k-teal',tn.length,'Lieferung heute'],['k-blue',list.length,'Aufträge (Filter)'],['k-green',eur(rev),'Umsatz (Zeitraum)']].map(([c,v,l])=>`<div class="dp-kpi ${c}"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
   document.getElementById('dp-bulk').className='dp-bulk'+(dpSel.size?' show':'');
   document.getElementById('dp-bulk-cnt').textContent=dpSel.size+' ausgewählt';
   if(!list.length){document.getElementById('dp-table').innerHTML=emptyState('🚛',dispoData.length?'Keine Treffer für diese Filter':'Noch keine Dispo-Aufträge – lege den ersten an oder importiere eine CSV');return}
