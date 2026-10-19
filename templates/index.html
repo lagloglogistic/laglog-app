@@ -3379,11 +3379,12 @@ function dsChips(){
 }
 function dsVToggle(i){const k=i<0?'__weitere__':dsVeh()[i];dsVSel.has(k)?dsVSel.delete(k):dsVSel.add(k);dispoStatsRender()}
 // Summen je Fahrzeug im Zeitraum von/bis (nur gewählte Fahrzeuge)
+const dsCnt=d=>['bestaetigt','erledigt'].includes(d.status||'offen'); // nur Bestätigt/Erledigt zählt in Umsatz/Einkauf
 function dsSums(){
   const l=dispoData.filter(d=>dsInRange(dpLD(d))&&dsShow(d.fahrzeug_nr||'–'));
   const v={};const get=k=>v[k]=v[k]||{n:0,c:0,r:0,e:0,p:0,x:0,pc:0};
   dsVeh().filter(dsShow).forEach(k=>get(k));
-  l.forEach(d=>{const x=get(d.fahrzeug_nr||'–');x.n++;x.c+=parseInt(d.anzahl_container)||1;x.r+=dpNum(d.verkaufspreis);x.e+=dpNum(d.einkaufspreis)});
+  l.forEach(d=>{const x=get(d.fahrzeug_nr||'–');x.n++;x.c+=parseInt(d.anzahl_container)||1;if(dsCnt(d)){x.r+=dpNum(d.verkaufspreis);x.e+=dpNum(d.einkaufspreis)}});
   Object.keys(dsRates).filter(dsShow).forEach(k=>{Object.entries(dsRates[k]).forEach(([day,val])=>{if(dsInRange(day)){get(k).p+=dpNum(val);get(k).pc++}})});
   Object.keys(dsInfo).filter(dsShow).forEach(k=>{Object.entries(dsInfo[k]).forEach(([day,o])=>{if(dsInRange(day)&&o&&o.extra!=null)get(k).x+=dpNum(o.extra)})});
   return{l,v};
@@ -3404,7 +3405,7 @@ function dsSummary(){
 // 30-Tage-Tabelle
 function dsCell(v,day){
   const l=dispoData.filter(d=>d.fahrzeug_nr===v&&dpLD(d)===day);
-  const r=l.reduce((a,d)=>a+dpNum(d.verkaufspreis),0),e=l.reduce((a,d)=>a+dpNum(d.einkaufspreis),0),c=l.reduce((a,d)=>a+(parseInt(d.anzahl_container)||1),0),p=dsRate(v,day),x=dsX(v,day),g=r+x;
+  const lc=l.filter(dsCnt),r=lc.reduce((a,d)=>a+dpNum(d.verkaufspreis),0),e=lc.reduce((a,d)=>a+dpNum(d.einkaufspreis),0),c=l.reduce((a,d)=>a+(parseInt(d.anzahl_container)||1),0),p=dsRate(v,day),x=dsX(v,day),g=r+x;
   return{n:l.length,c,r,x,g,m:g-e-p,p,has:l.length>0||p!==0||x!==0};
 }
 const dsVCols=7;
