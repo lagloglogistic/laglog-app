@@ -1142,7 +1142,7 @@ DISPO_FIELDS = [
     ('gestellung_adresse', 'Adresse Gestellung', 'stationen'),
     ('slot_gestellung', 'Slot/Zeit Gestellung', 'stationen'),
     ('ref_gestellung', 'Referenz Gestellung', 'stationen'),
-    ('leerdepot', 'Leerdepot', 'stationen'),
+    ('leerdepot', 'Leerdepot/ Terminal', 'stationen'),
     ('leerdepot_adresse', 'Adresse Leerdepot', 'stationen'),
     ('slot_leerdepot', 'Slot Leerdepot', 'stationen'),
     ('tourenplan_leerdepot', 'Tourenplan Leerdepot', 'stationen'),
@@ -1418,7 +1418,7 @@ _GN = {'termine': 'Termine & Fahrzeug', 'stationen': 'Stationen', 'container': '
 _WD = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
 STATIONS = [('aufnahme', 'Aufnahme', [('tourenplan_aufnahme', 'Tour'), ('slot_aufnahme', 'Slot')]),
             ('gestellung', 'Gestellung', [('ref_gestellung', 'Ref.'), ('slot_gestellung', 'Slot/Zeit')]),
-            ('leerdepot', 'Leerdepot', [('tourenplan_leerdepot', 'Tour'), ('slot_leerdepot', 'Slot')])]
+            ('leerdepot', 'Leerdepot/ Terminal', [('tourenplan_leerdepot', 'Tour'), ('slot_leerdepot', 'Slot')])]
 
 def _pdf_sel(cfg):
     s = (cfg or {}).get('dispo_pdf_fields')
