@@ -1159,7 +1159,7 @@ DISPO_FIELDS = [
 DISPO_KEYS = [f[0] for f in DISPO_FIELDS]
 DISPO_LABEL = {f[0]: f[1] for f in DISPO_FIELDS}
 DISPO_PDF_DEFAULT = [k for k in DISPO_KEYS if k not in ('nr', 'einkaufspreis', 'verkaufspreis')]
-DISPO_STATUS = {'offen': 'Offen', 'bestaetigt': 'Bestätigt', 'in_fahrt': 'In Fahrt', 'erledigt': 'Erledigt', 'abgelehnt': 'Abgelehnt', 'storniert': 'Storniert'}
+DISPO_STATUS = {'offen': 'Offen', 'bestaetigt': 'Bestätigt', 'in_fahrt': 'In Fahrt', 'erledigt': 'Erledigt', 'fakturiert': 'Fakturiert', 'abgelehnt': 'Abgelehnt', 'storniert': 'Storniert'}
 DISPO_BULK_FIELDS = [k for k in DISPO_KEYS if k not in ('nr', 'container_extra')]
 NEW_FIELDS = {'container_extra': 3, 'gestellung_adresse': 4, 'aufnahme_adresse': 5, 'leerdepot_adresse': 5, 'kunde': 6}   # Feld -> Version, ab der es bekannt ist (ältere Einstellungen bekommen es automatisch)
 
@@ -1412,8 +1412,8 @@ def set_dispo_dayinfo():
 from xml.sax.saxutils import escape as _xesc
 _DARK = colors.HexColor('#1a2e4a'); _BLUE = colors.HexColor('#2563a8')
 _LGRAY = colors.HexColor('#f0f4f8'); _BORDER = colors.HexColor('#c8d8e8'); _WHITE = colors.white
-_GC = {'termine': ('#0e7490', '#ecfeff'), 'stationen': ('#7c3aed', '#f5f3ff'),
-       'container': ('#d97706', '#fffbeb'), 'finanzen': ('#059669', '#ecfdf5'), 'anmerkung': ('#db2777', '#fdf2f8')}
+_GC = {'termine': ('#1f3a5f', '#eef2f7'), 'stationen': ('#3d5a73', '#eff3f6'),
+       'container': ('#5b6770', '#f1f2f4'), 'finanzen': ('#2f5d50', '#eef4f1'), 'anmerkung': ('#6b4a4f', '#f5f0f1')}
 _GN = {'termine': 'Termine & Fahrzeug', 'stationen': 'Stationen', 'container': 'Container & Reederei', 'finanzen': 'Finanzen', 'anmerkung': 'Anmerkung'}
 _WD = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
 STATIONS = [('aufnahme', 'Aufnahme', [('tourenplan_aufnahme', 'Tour'), ('slot_aufnahme', 'Slot')]),
@@ -1546,7 +1546,7 @@ def _gen_tagesplan_pdf(dispos, cfg, title, subtitle, multi_day):
         for r in body_rows:
             st.append(('BACKGROUND', (0,r), (-1,r), _WHITE if body_rows.index(r) % 2 == 0 else colors.HexColor('#f8fafc')))
         for r in days:
-            st += [('SPAN', (0,r), (-1,r)), ('BACKGROUND', (0,r), (-1,r), colors.HexColor('#dbeafe')), ('LINEABOVE', (0,r), (-1,r), 0.8, _BLUE)]
+            st += [('SPAN', (0,r), (-1,r)), ('BACKGROUND', (0,r), (-1,r), colors.HexColor('#e5eaf0')), ('LINEABOVE', (0,r), (-1,r), 0.8, _BLUE)]
         t = Table(rows, colWidths=cw, repeatRows=1); t.setStyle(TableStyle(st)); story.append(t)
     story += [Spacer(1, 6), Paragraph(_foot(cfg, 'Gedruckt'), s['ctr'])]
     doc.build(story)
