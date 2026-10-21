@@ -2945,7 +2945,7 @@ initAuth().then(async ()=>{
 let dispoData=[],dpEditId=null,dpSel=new Set(),dpStSel=new Set(),dpVhSel=new Set(),dpThT=null,dpSort={k:'lieferdatum',d:-1},dpCfg={form:null,pdf:null,status:[],veh:['LKW1','LKW2','LKW3'],prefix:'DISPO',ver:0},dpDragK=null;
 const DP_G={termine:{n:'Termine & Fahrzeug',c:'#0e7490',bg:'#ecfeff'},stationen:{n:'Stationen',c:'#7c3aed',bg:'#f5f3ff'},container:{n:'Container & Reederei',c:'#d97706',bg:'#fffbeb'},finanzen:{n:'Finanzen',c:'#059669',bg:'#ecfdf5'},anmerkung:{n:'Anmerkung',c:'#db2777',bg:'#fdf2f8'}};
 const DP_TYPES=['20\' DV','40\' DV','40\' HC','45\' HC','20\' Reefer','40\' Reefer HC','20\' Open Top','40\' Open Top','20\' Flat Rack','40\' Flat Rack','20\' Tank','Sonstige'];
-const DP_ST={offen:'Offen',bestaetigt:'Bestätigt',in_fahrt:'In Fahrt',erledigt:'Erledigt',abgelehnt:'Abgelehnt',storniert:'Storniert'};
+const DP_ST={offen:'Offen',bestaetigt:'Bestätigt',in_fahrt:'In Fahrt',erledigt:'Erledigt',fakturiert:'Fakturiert',abgelehnt:'Abgelehnt',storniert:'Storniert'};
 // Single source of truth: Reihenfolge = Standard-Spaltenreihenfolge UND Reihenfolge in der Eingabemaske
 const DP_FIELDS=[
  {k:'nr',n:'Dispo-Nr.',g:'termine',w:130,t:'none'},
@@ -3007,7 +3007,7 @@ const dpExtras=d=>Array.isArray(d.container_extra)?d.container_extra.filter(x=>x
 const dpStLabel=s=>DP_ST[s]||s||'Offen';
 function dpStNorm(t){t=(t||'').trim();if(!t)return'offen';const m=Object.entries(DP_ST).find(([k,v])=>v.toLowerCase()===t.toLowerCase()||k===t.toLowerCase());return m?m[0]:t}
 const DP_PAL=['#7c3aed','#db2777','#0891b2','#65a30d','#ea580c','#4f46e5','#0d9488','#be123c'];
-function dpStColor(s){const std={offen:'#d97706',in_fahrt:'#2563eb',erledigt:'#16a34a',storniert:'#dc2626',bestaetigt:'#0d9488',abgelehnt:'#be185d'};if(std[s])return std[s];let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return DP_PAL[h%DP_PAL.length]}
+function dpStColor(s){const std={offen:'#d97706',in_fahrt:'#2563eb',erledigt:'#16a34a',fakturiert:'#4f46e5',storniert:'#dc2626',bestaetigt:'#0d9488',abgelehnt:'#be185d'};if(std[s])return std[s];let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return DP_PAL[h%DP_PAL.length]}
 const dpAllStatus=()=>[...new Set([...Object.keys(DP_ST),...dispoData.map(d=>d.status||'offen')])];
 
 // Spalten: Reihenfolge + Sichtbarkeit (Drag&Drop im Panel), gespeichert im Browser
@@ -3379,7 +3379,7 @@ function dsChips(){
 }
 function dsVToggle(i){const k=i<0?'__weitere__':dsVeh()[i];dsVSel.has(k)?dsVSel.delete(k):dsVSel.add(k);dispoStatsRender()}
 // Summen je Fahrzeug im Zeitraum von/bis (nur gewählte Fahrzeuge)
-const dsCnt=d=>['bestaetigt','erledigt'].includes(d.status||'offen'); // nur Bestätigt/Erledigt zählt in Umsatz/Einkauf
+const dsCnt=d=>['bestaetigt','erledigt','fakturiert'].includes(d.status||'offen'); // nur Bestätigt/Erledigt zählt in Umsatz/Einkauf
 function dsSums(){
   const l=dispoData.filter(d=>dsInRange(dpLD(d))&&dsShow(d.fahrzeug_nr||'–'));
   const v={};const get=k=>v[k]=v[k]||{n:0,c:0,r:0,e:0,p:0,x:0,pc:0};
@@ -3631,7 +3631,7 @@ function dhGo(v,d,st){ // Sprung ins Dispo-Tool mit Filtern
 }
 function dhAddDays(iso,n){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return dpISO(d)}
 function dhFmt(iso){return iso?new Date(iso+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'}):'–'}
-const dhOpen=d=>!['erledigt','storniert','abgelehnt'].includes(d.status||'offen');
+const dhOpen=d=>!['erledigt','fakturiert','storniert','abgelehnt'].includes(d.status||'offen');
 const dhStat=d=>d.status||'offen';
 const dhRev=d=>dpNum(d.verkaufspreis);
 function dhW(id,body,extra){return body}
