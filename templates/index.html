@@ -717,15 +717,15 @@ th.r{text-align:right}
   <div class="dp-chiprow ds-chiprow"><span class="dp-chipcap">Fahrzeug</span><div class="dp-chips" id="ds-vchips"></div></div>
   <div class="dp-kpis" id="ds-kpis"></div>
   <div class="card" style="margin-bottom:14px">
-    <div class="ch" style="flex-wrap:wrap;gap:8px"><div class="ct" id="ds-title">Tagesübersicht je Fahrzeug · 30 Tage</div>
+    <div class="ch" style="flex-wrap:wrap;gap:8px"><div class="ct" id="ds-title">Tagesübersicht je Fahrzeug</div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <button class="btn btn-sm btn-ghost" onclick="dsShift(-30)">‹ 30 Tage zurück</button>
-        <label style="font-size:11px;color:var(--text3)">von</label><input type="date" id="ds-start" onchange="dsDaily()">
-        <label style="font-size:11px;color:var(--text3)">bis</label><input type="date" id="ds-end" onchange="dsDaily()" title="leer = 30 Tage ab „von“">
-        <button class="btn btn-sm btn-ghost" onclick="dsShift(30)">30 Tage vor ›</button>
-        <button class="btn btn-sm btn-ghost" onclick="dsToday()">Letzte 30 Tage</button>
+        <button class="btn btn-sm btn-ghost" onclick="dsMonthShift(-1)">‹ Vormonat</button>
+        <input type="month" id="ds-month" onchange="dsDaily()" title="Monat auswählen">
+        <button class="btn btn-sm btn-ghost" onclick="dsMonthShift(1)">Nächster Monat ›</button>
+        <button class="btn btn-sm btn-ghost" onclick="dsToday()">Aktueller Monat</button>
+        <input type="hidden" id="ds-start"><input type="hidden" id="ds-end">
       </div></div>
-    <div class="ds-hint">Tagespauschale = Kosten des Fahrzeugs pro Tag (hier eintragen, wird automatisch gespeichert). Gesamtumsatz = Umsatz + weitere Umsätze. Marge = Gesamtumsatz − Einkauf − Tagespauschale. Zeitraum: „von“ und „bis“ setzen (ohne „bis“ werden 30 Tage ab „von“ gezeigt, max. 366 Tage). ⤓ trägt eine Pauschale in alle leeren Tage ein.</div>
+    <div class="ds-hint">Tagespauschale = Kosten des Fahrzeugs pro Tag (hier eintragen, wird automatisch gespeichert). Gesamtumsatz = Umsatz + weitere Umsätze. Marge = Gesamtumsatz − Einkauf − Tagespauschale. Monat oben auswählen. Umsatz und Einkauf zählen für Aufträge mit Status Bestätigt, In Fahrt, Erledigt und Fakturiert. ⤓ trägt eine Pauschale in alle leeren Tage ein.</div>
     <div class="ds-wrap" id="ds-daily"></div>
   </div>
   <div class="card"><div class="ch"><div class="ct">Je Fahrzeug · Zeitraum von/bis (oben)</div></div><div class="tw" id="ds-veh"></div></div>
@@ -3361,15 +3361,15 @@ async function dsLoadRates(){
   try{const r=await fetch('/api/dispo/rates');dsRates=r.ok?await r.json():{}}catch{dsRates={}}if(!dsRates||typeof dsRates!=='object')dsRates={};
   try{const r=await fetch('/api/dispo/dayinfo');dsInfo=r.ok?await r.json():{}}catch{dsInfo={}}if(!dsInfo||typeof dsInfo!=='object')dsInfo={};
 }
-function dsStart(){const el=document.getElementById('ds-start');if(!el.value)el.value=dsAddDays(dpToday(),-29);return el.value}
+function dsMonthEl(){const el=document.getElementById('ds-month');if(!el.value)el.value=dpToday().slice(0,7);return el}
+function dsStart(){return dsMonthEl().value+'-01'}
+function dsEnd(){const[y,m]=dsMonthEl().value.split('-').map(Number);return dpISO(new Date(y,m,0))}
 function dsDays(){
-  const start=dsStart();let end=document.getElementById('ds-end').value;
-  if(!end||end<start)end=dsAddDays(start,29);
-  const n=Math.min(366,Math.round((new Date(end+'T12:00:00')-new Date(start+'T12:00:00'))/864e5)+1);
+  const start=dsStart(),end=dsEnd(),n=Math.round((new Date(end+'T12:00:00')-new Date(start+'T12:00:00'))/864e5)+1;
   return Array.from({length:n},(_,i)=>dsAddDays(start,i));
 }
-function dsShift(n){const el=document.getElementById('ds-start'),e=document.getElementById('ds-end');el.value=dsAddDays(dsStart(),n);if(e.value)e.value=dsAddDays(e.value,n);dsDaily()}
-function dsToday(){document.getElementById('ds-start').value=dsAddDays(dpToday(),-29);document.getElementById('ds-end').value='';dsDaily()}
+function dsMonthShift(n){const el=dsMonthEl(),[y,m]=el.value.split('-').map(Number),d=new Date(y,m-1+n,1);el.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');dsDaily()}
+function dsToday(){dsMonthEl().value=dpToday().slice(0,7);dsDaily()}
 function dsRange(){return[document.getElementById('ds-from').value,document.getElementById('ds-to').value]}
 function dsInRange(d){const[fr,to]=dsRange();return(!fr||d>=fr)&&(!to||d<=to)}
 // Fahrzeug-Chips (Mehrfachauswahl)
@@ -3379,7 +3379,7 @@ function dsChips(){
 }
 function dsVToggle(i){const k=i<0?'__weitere__':dsVeh()[i];dsVSel.has(k)?dsVSel.delete(k):dsVSel.add(k);dispoStatsRender()}
 // Summen je Fahrzeug im Zeitraum von/bis (nur gewählte Fahrzeuge)
-const dsCnt=d=>['bestaetigt','erledigt','fakturiert'].includes(d.status||'offen'); // nur Bestätigt/Erledigt zählt in Umsatz/Einkauf
+const dsCnt=d=>['bestaetigt','in_fahrt','erledigt','fakturiert'].includes(d.status||'offen'); // Bestätigt, In Fahrt, Erledigt, Fakturiert zählen in Umsatz/Einkauf
 function dsSums(){
   const l=dispoData.filter(d=>dsInRange(dpLD(d))&&dsShow(d.fahrzeug_nr||'–'));
   const v={};const get=k=>v[k]=v[k]||{n:0,c:0,r:0,e:0,p:0,x:0,pc:0};
@@ -3412,7 +3412,7 @@ const dsVCols=7;
 function dsDaily(){
   const days=dsDays(),all=dsVeh(),today=dpToday();
   const vs=all.map((v,i)=>({v,i})).filter(o=>dsShow(o.v));
-  document.getElementById('ds-title').textContent='Tagesübersicht je Fahrzeug · '+days.length+' Tage';
+  document.getElementById('ds-title').textContent='Tagesübersicht je Fahrzeug · '+new Date(dsStart()+'T12:00:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'});
   if(!vs.length){document.getElementById('ds-daily').innerHTML='<div style="padding:22px;text-align:center;color:var(--text3);font-size:13px">Kein Standard-Fahrzeug ausgewählt (Auswahl „Weitere“ wirkt nur auf die Zusammenfassung unten).</div>';return}
   let h1='<tr><th rowspan="2" class="ds-d">Datum</th>',h2='<tr>';
   vs.forEach(({v,i})=>{h1+=`<th colspan="${dsVCols}" class="vb vc${i%4}">${dpEsc(v)} <button class="ds-fill" title="Tagespauschale für alle leeren Tage dieser Tabelle eintragen" onclick="dsFill(${i})">⤓</button></th>`;h2+=`<th class="vb" title="Aufträge dieses Tages im Dispo-Tool anzeigen"></th><th>Tages&shy;pauschale €</th><th>Umsatz</th><th>Weitere Umsätze €</th><th>Gesamt&shy;umsatz</th><th>Marge</th><th>Notiz</th>`});
