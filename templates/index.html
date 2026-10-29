@@ -536,6 +536,29 @@ th.r{text-align:right}
 @media(max-width:900px){.dh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dh-s3,.dh-s4{grid-column:span 2}}
 @media(max-width:560px){.dh-grid{grid-template-columns:1fr}.dh-s1,.dh-s2,.dh-s3,.dh-s4{grid-column:span 1}}
 /* /DASH2 */
+/* ═══ LAGERUNG ═══ */
+.lg-wrap{overflow:auto;max-height:68vh;border-top:1px solid var(--border)}
+.lg-t{border-collapse:separate;border-spacing:0;width:100%;font-size:12px;min-width:1500px}
+.lg-t th{position:sticky !important;top:0;background:#1f3a5f;color:#fff;font-weight:600;text-align:left;padding:9px 8px;font-size:11px;white-space:nowrap;z-index:2}
+.lg-t td{padding:2px 4px;border-bottom:1px solid var(--border);background:#fff}
+.lg-t tr:nth-child(even) td{background:#f4f6f9}
+.lg-t tr.out td{color:var(--text2)}
+.lg-t tr.in td:first-child{box-shadow:inset 3px 0 0 #0e7490}
+.lg-t input{width:100%;border:1px solid transparent;background:transparent;padding:6px 6px;border-radius:6px;font:inherit;font-size:12px;box-sizing:border-box;min-width:0}
+.lg-t input:hover{border-color:var(--border2);background:#fff}
+.lg-t input:focus{outline:none;border-color:#2563eb;background:#fff}
+.lg-t td.r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;padding:2px 10px}
+.lg-t td.r b{font-weight:700}
+.lg-t input.n{text-align:right}
+.lg-x{border:none;background:transparent;color:#94a3b8;cursor:pointer;font-size:14px;padding:4px 8px;border-radius:6px}
+.lg-x:hover{background:#fee2e2;color:#dc2626}
+.lg-empty{padding:34px;text-align:center;color:var(--text3);font-size:13px}
+#lg-kpis{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+#lg-kpis .dp-kpi{flex:0 1 200px;min-width:150px;padding:11px 16px;cursor:default}
+#lg-kpis .dp-kpi .v{font-size:21px}
+#lg-kpis .dp-kpi .l{font-size:10px}
+.lg-wrap+.ds-hint{margin-top:10px}
+/* /LAG */
 </style>
 </head>
 <body>
@@ -552,6 +575,7 @@ th.r{text-align:right}
     <button class="nb" onclick="showPage('orders',this)" style="display:none" disabled>Aufträge</button>
     <button class="nb nb-dispo" onclick="showPage('dispo',this)">🚛 Dispo</button>
     <button class="nb" onclick="showPage('dispostats',this)">Dispo-Statistik</button>
+    <button class="nb" onclick="showPage('lagerung',this)">Lagerung</button>
     <button class="nb" onclick="showPage('customers',this)">Kunden</button>
     <button class="nb" onclick="showPage('email',this)">✉ E-Mail</button>
   </nav>
@@ -613,6 +637,27 @@ th.r{text-align:right}
   </div>
 </div>
 <!--/DASH-->
+
+<!--LAG-->
+<div class="page" id="page-lagerung">
+  <div class="ph">
+    <div><div class="pt">Lagerung</div><div class="ps">Übersicht aller gelagerten Container</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="lgExport()">⬇ Excel-Export (CSV)</button>
+      <button class="btn btn-dark" onclick="lgAdd()">＋ Container einlagern</button>
+    </div>
+  </div>
+  <div class="dp-kpis" id="lg-kpis"></div>
+  <div class="card">
+    <div class="toolbar" style="flex-wrap:wrap;gap:8px">
+      <input class="si" type="text" id="lg-q" placeholder="Suchen (Kunde, Container, Lagerort …)" oninput="lgRender()">
+      <div class="dp-chips" id="lg-chips"></div>
+    </div>
+    <div class="lg-wrap" id="lg-table"></div>
+    <div class="ds-hint">Alle Felder sind direkt in der Tabelle bearbeitbar und werden automatisch gespeichert. Tage = Einlagerung bis Auslagerung (beide Tage zählen); ohne Auslagerungsdatum läuft die Zählung bis heute. Eine eigene Zahl in „Tage“ überschreibt die Berechnung (leer lassen = automatisch). EK/VK gesamt = Tage × Preis pro Tag.</div>
+  </div>
+</div>
+<!--/LAG-->
 
 <!-- ORDERS -->
 <div class="page" id="page-orders">
@@ -3750,6 +3795,82 @@ fetch('/api/auth/me').then(r=>r.json()).then(u=>{if(u&&u.loggedIn){dhUser=((u.na
 document.addEventListener('DOMContentLoaded',dhRender);
 setInterval(()=>{if(!dhEdit&&document.getElementById('page-dashboard').classList.contains('active'))dhRender()},60000);
 // /DASH2JS
+// ═══ LAGERUNG ═══
+let lgData=[],lgFilter='alle';
+const lgNum=v=>{const n=parseFloat(String(v==null?'':v).replace(',','.'));return isNaN(n)?0:n};
+const lgMoney=v=>v===''||v==null?'':lgNum(v).toFixed(2).replace('.',',');
+function lgDays(r){
+  if(r.tage_override!==''&&r.tage_override!=null&&!isNaN(parseFloat(String(r.tage_override).replace(',','.'))))return Math.max(0,Math.round(lgNum(r.tage_override)));
+  if(!r.einlagerung)return 0;
+  const end=r.auslagerung||dpToday();
+  return Math.max(0,Math.round((new Date(end+'T12:00:00')-new Date(r.einlagerung+'T12:00:00'))/864e5)+1);
+}
+function lgCalc(r){const t=lgDays(r),ek=t*lgNum(r.ek_tag),vk=t*lgNum(r.vk_tag);return{t,ek,vk,m:vk-ek}}
+async function lgLoad(){try{lgData=await (await fetch('/api/lagerung')).json();if(!Array.isArray(lgData))lgData=[]}catch(e){lgData=[]}lgRender()}
+function lgVisible(){
+  const q=(document.getElementById('lg-q')||{value:''}).value.trim().toLowerCase();
+  return lgData.filter(r=>{
+    if(lgFilter==='ein'&&r.auslagerung)return false;
+    if(lgFilter==='aus'&&!r.auslagerung)return false;
+    if(q&&![r.kunde,r.container,r.lagerort,r.destination,r.anmerkung].some(x=>String(x||'').toLowerCase().includes(q)))return false;
+    return true;
+  }).sort((a,b)=>(b.einlagerung||'9999').localeCompare(a.einlagerung||'9999'));
+}
+function lgKpis(list){
+  const ein=list.filter(r=>!r.auslagerung).length,aus=list.length-ein,c=list.map(lgCalc);
+  const sum=k=>c.reduce((a,x)=>a+x[k],0),avg=list.length?sum('t')/list.length:0;
+  const k=(v,l,c)=>`<div class="dp-kpi ${c}"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+  document.getElementById('lg-kpis').innerHTML=k(ein,'Aktuell eingelagert','k-teal')+k(aus,'Ausgelagert','k-purple')+k(avg.toFixed(1).replace('.',','),'Ø Lagertage','k-blue')+k(eur(sum('ek')),'EK gesamt','k-amber')+k(eur(sum('vk')),'VK gesamt','k-green')+k(eur(sum('m')),'Marge','k-blue');
+}
+function lgRender(){
+  const chips=[['alle','Alle'],['ein','Eingelagert'],['aus','Ausgelagert']];
+  document.getElementById('lg-chips').innerHTML=chips.map(([k,l])=>`<span class="dp-chip ${lgFilter===k?'on':''}" style="--c:#0e7490" onclick="lgFilter='${k}';lgRender()">${l}</span>`).join('');
+  const list=lgVisible();lgKpis(list);
+  const kd=[...new Set([...(typeof customers!=='undefined'?customers:[]).map(c=>c.company||c.name),...lgData.map(r=>r.kunde),...dispoData.map(d=>d.kunde)].filter(Boolean))].sort();
+  const dl='<datalist id="lg-dl-k">'+kd.map(x=>`<option value="${dpEsc(x)}">`).join('')+'</datalist><datalist id="lg-dl-o">'+[...new Set(lgData.map(r=>r.lagerort).filter(Boolean))].map(x=>`<option value="${dpEsc(x)}">`).join('')+'</datalist><datalist id="lg-dl-d">'+[...new Set(lgData.map(r=>r.destination).filter(Boolean))].map(x=>`<option value="${dpEsc(x)}">`).join('')+'</datalist>';
+  if(!list.length){document.getElementById('lg-table').innerHTML='<div class="lg-empty">'+(lgData.length?'Keine Treffer für diesen Filter.':'Noch keine Container eingelagert. Mit „＋ Container einlagern“ den ersten Eintrag anlegen.')+'</div>';return}
+  const inp=(r,f,t,extra)=>`<input type="${t||'text'}" value="${dpEsc(r[f]||'')}" ${extra||''} onchange="lgSet('${r.id}','${f}',this.value,this)">`;
+  const rows=list.map(r=>{const c=lgCalc(r);return `<tr id="lg-${r.id}" class="${r.auslagerung?'out':'in'}">
+   <td>${inp(r,'einlagerung','date')}</td><td>${inp(r,'kunde','text','list="lg-dl-k"')}</td><td>${inp(r,'container','text','placeholder="ABCD1234567"')}</td><td>${inp(r,'lagerort','text','list="lg-dl-o"')}</td>
+   <td>${inp(r,'auslagerung','date')}</td><td>${inp(r,'destination','text','list="lg-dl-d"')}</td>
+   <td style="width:70px"><input class="n" inputmode="numeric" value="${dpEsc(r.tage_override||'')}" placeholder="${c.t}" title="Leer = automatisch (${lgCalc({...r,tage_override:''}).t})" onchange="lgSet('${r.id}','tage_override',this.value,this)"></td>
+   <td>${inp(r,'anmerkung')}</td>
+   <td style="width:80px"><input class="n" inputmode="decimal" value="${lgMoney(r.ek_tag)}" placeholder="–" onchange="lgSet('${r.id}','ek_tag',this.value,this,1)"></td><td class="r" data-c="ek"><b>${eur(c.ek)}</b></td>
+   <td style="width:80px"><input class="n" inputmode="decimal" value="${lgMoney(r.vk_tag)}" placeholder="–" onchange="lgSet('${r.id}','vk_tag',this.value,this,1)"></td><td class="r" data-c="vk"><b>${eur(c.vk)}</b></td>
+   <td class="r" data-c="m">${eur(c.m)}</td><td><button class="lg-x" title="Eintrag löschen" onclick="lgDel('${r.id}')">✕</button></td></tr>`}).join('');
+  document.getElementById('lg-table').innerHTML=dl+`<table class="lg-t"><thead><tr><th style="min-width:150px">Datum Einlagerung</th><th style="min-width:170px">Kunde</th><th style="min-width:140px">Containernummer</th><th style="min-width:150px">Lagerort</th><th style="min-width:150px">Datum Auslagerung</th><th style="min-width:150px">Destination</th><th style="min-width:60px">Tage</th><th style="min-width:170px">Anmerkung</th><th style="min-width:75px">EK/Tag</th><th style="min-width:95px">EK gesamt</th><th style="min-width:75px">VK/Tag</th><th style="min-width:95px">VK gesamt</th><th style="min-width:90px">Marge</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+async function lgSet(id,f,v,el,money){
+  const r=lgData.find(x=>x.id===id);if(!r)return;
+  r[f]=money?String(v).trim().replace(',','.'):String(v).trim();
+  if(f==='container')r[f]=r[f].toUpperCase();
+  if(money&&el)el.value=lgMoney(r[f]);
+  if(f==='container'&&el)el.value=r[f];
+  const tr=document.getElementById('lg-'+id);
+  if(tr){const c=lgCalc(r);tr.className=r.auslagerung?'out':'in';
+    tr.querySelector('[data-c=ek]').innerHTML='<b>'+eur(c.ek)+'</b>';tr.querySelector('[data-c=vk]').innerHTML='<b>'+eur(c.vk)+'</b>';tr.querySelector('[data-c=m]').textContent=eur(c.m);
+    const ti=tr.querySelectorAll('input')[6];if(ti)ti.placeholder=c.t}
+  lgKpis(lgVisible());
+  try{await fetch('/api/lagerung/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)})}catch(e){alert('Speichern fehlgeschlagen')}
+}
+async function lgAdd(){
+  const r=await (await fetch('/api/lagerung',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({einlagerung:dpToday()})})).json();
+  lgData.push(r);lgFilter='alle';const q=document.getElementById('lg-q');if(q)q.value='';lgRender();
+  const tr=document.getElementById('lg-'+r.id);if(tr){tr.scrollIntoView({block:'center'});const i=tr.querySelectorAll('input')[1];if(i)i.focus()}
+}
+async function lgDel(id){
+  const r=lgData.find(x=>x.id===id);if(!r||!confirm('Eintrag '+(r.container||'ohne Containernummer')+' wirklich löschen?'))return;
+  await fetch('/api/lagerung/'+id,{method:'DELETE'});lgData=lgData.filter(x=>x.id!==id);lgRender();
+}
+function lgExport(){
+  const list=lgVisible(),q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"',de=iso=>iso?iso.split('-').reverse().join('.'):'';
+  const n=v=>String(Math.round(v*100)/100).replace('.',',');
+  const rows=[['Datum Einlagerung','Kunde','Containernummer','Lagerort','Datum Auslagerung','Destination','Tage','Anmerkung','EK/Tag','EK gesamt','VK/Tag','VK gesamt','Marge']].concat(list.map(r=>{const c=lgCalc(r);return[de(r.einlagerung),r.kunde,r.container,r.lagerort,de(r.auslagerung),r.destination,c.t,r.anmerkung,n(lgNum(r.ek_tag)),n(c.ek),n(lgNum(r.vk_tag)),n(c.vk),n(c.m)]}));
+  const csv='﻿'+rows.map(r=>r.map(q).join(';')).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='Lagerung_'+dpToday()+'.csv';document.body.appendChild(a);a.click();a.remove();
+}
+(function(){const o=showPage;showPage=function(id,btn){o(id,btn);if(id==='lagerung')lgLoad()}})();
+// /LAGJS
 </script>
 </body>
 </html>
