@@ -1773,6 +1773,53 @@ def dispo_mail_attachments():
 def dispo_mail_log():
     return jsonify(load_db().get('dispo_mail_log', [])[:15])
 
+# ═══ LAGERUNG (gelagerte Container) ═══
+LAG_FIELDS = ['einlagerung', 'kunde', 'container', 'lagerort', 'auslagerung', 'destination',
+              'anmerkung', 'ek_tag', 'vk_tag', 'tage_override']
+
+def _lag_clean(d):
+    return {k: ('' if d.get(k) is None else str(d.get(k))[:500]) for k in LAG_FIELDS}
+
+@app.route('/api/lagerung', methods=['GET'])
+@login_required
+def get_lagerung():
+    return jsonify(load_db().get('lagerung', []))
+
+@app.route('/api/lagerung', methods=['POST'])
+@login_required
+def create_lagerung():
+    db = load_db()
+    r = _lag_clean(request.json or {})
+    r['id'] = str(uuid.uuid4())
+    r['createdAt'] = datetime.now().isoformat()
+    r['createdBy'] = current_user()['username']
+    db.setdefault('lagerung', []).append(r)
+    save_db(db)
+    return jsonify(r), 201
+
+@app.route('/api/lagerung/<lid>', methods=['PUT'])
+@login_required
+def update_lagerung(lid):
+    db = load_db()
+    for i, r in enumerate(db.get('lagerung', [])):
+        if r['id'] == lid:
+            n = _lag_clean(request.json or {})
+            n.update({'id': lid, 'createdAt': r.get('createdAt', ''), 'createdBy': r.get('createdBy', ''),
+                      'updatedBy': current_user()['username']})
+            db['lagerung'][i] = n
+            save_db(db)
+            return jsonify(n)
+    return jsonify({'error': 'not found'}), 404
+
+@app.route('/api/lagerung/<lid>', methods=['DELETE'])
+@login_required
+def delete_lagerung(lid):
+    db = load_db()
+    db['lagerung'] = [r for r in db.get('lagerung', []) if r['id'] != lid]
+    save_db(db)
+    return jsonify({'ok': True})
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
     app.run(host='0.0.0.0', port=port, debug=False)
