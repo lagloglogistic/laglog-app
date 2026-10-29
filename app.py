@@ -1628,9 +1628,12 @@ def dispo_bulk_pdf():
     if not sel: return jsonify({'error': 'keine Auswahl'}), 400
     return _pdf_resp(_gen_orders_pdf(sel, load_config()), f"Transportauftraege_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf")
 
+PLAN_STATUS = ('bestaetigt', 'in_fahrt')
+
 def _plan_build(data):
     """Tagesplan nach Datenlage bauen -> (pdf_bytes, dateiname, anzahl_auftraege)"""
-    dispos = load_db().get('dispo', []); cfg = load_config()
+    # Tagesplan: nur Aufträge mit Status Bestätigt oder In Fahrt
+    dispos = [d for d in load_db().get('dispo', []) if (d.get('status') or 'offen') in PLAN_STATUS]; cfg = load_config()
     ids = data.get('ids') or []
     if ids:
         sel = [d for d in dispos if d['id'] in set(ids)]
