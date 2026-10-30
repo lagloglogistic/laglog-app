@@ -1119,7 +1119,7 @@ def generate_reminder_pdf(inv, cfg=None, doc_type='reminder', lang='de'):
 # DISPO MODULE
 # ════════════════════════════════════════════════════════
 from reportlab.lib.pagesizes import landscape
-from reportlab.platypus import PageBreak
+from reportlab.platypus import PageBreak, BaseDocTemplate, PageTemplate, Frame, NextPageTemplate
 
 def safe_float(v):
     try: return float(str(v).replace(',', '.')) if v not in ('', None) else 0.0
@@ -1515,10 +1515,15 @@ def _plan_columns(sel):
 def _plan_sort(d):
     return ((d.get('lieferdatum') or '')[:10], d.get('fahrzeug_nr') or '', d.get('slot_aufnahme') or d.get('tourenplan_aufnahme') or '', d.get('nr') or '')
 
-def _gen_tagesplan_pdf(dispos, cfg, title, subtitle, multi_day):
+def _gen_tagesplan_pdf(dispos, cfg, title, subtitle, multi_day, with_orders=True):
+    """Seite 1 ff.: Tagesplan (Querformat), danach je Auftrag eine Seite Transportauftrag (Hochformat)"""
     buf = io.BytesIO()
     PW, PH = landscape(A4)
-    doc = SimpleDocTemplate(buf, pagesize=(PW, PH), leftMargin=9*mm, rightMargin=9*mm, topMargin=9*mm, bottomMargin=9*mm)
+    doc = BaseDocTemplate(buf, pagesize=(PW, PH), leftMargin=9*mm, rightMargin=9*mm, topMargin=9*mm, bottomMargin=9*mm)
+    OW, OH = A4
+    doc.addPageTemplates([
+        PageTemplate(id='plan', pagesize=(PW, PH), frames=[Frame(9*mm, 9*mm, PW - 18*mm, PH - 18*mm, id='fp', leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)]),
+        PageTemplate(id='order', pagesize=(OW, OH), frames=[Frame(12*mm, 10*mm, OW - 24*mm, OH - 20*mm, id='fo', leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)])])
     W = PW - 18*mm; s = _styles(); sel = _pdf_sel(cfg); story = []
     _hdr(story, s, W, cfg)
     story += [Paragraph(title, s['h3']), Paragraph(subtitle, s['h1']),
@@ -1549,6 +1554,10 @@ def _gen_tagesplan_pdf(dispos, cfg, title, subtitle, multi_day):
             st += [('SPAN', (0,r), (-1,r)), ('BACKGROUND', (0,r), (-1,r), colors.HexColor('#e5eaf0')), ('LINEABOVE', (0,r), (-1,r), 0.8, _BLUE)]
         t = Table(rows, colWidths=cw, repeatRows=1); t.setStyle(TableStyle(st)); story.append(t)
     story += [Spacer(1, 6), Paragraph(_foot(cfg, 'Gedruckt'), s['ctr'])]
+    if with_orders and dispos:
+        ow = OW - 24*mm
+        for d in sorted(dispos, key=_plan_sort):
+            story += [NextPageTemplate('order'), PageBreak()] + _order_story(d, cfg, s, ow)
     doc.build(story)
     return buf.getvalue()
 
