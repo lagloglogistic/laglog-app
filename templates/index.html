@@ -559,6 +559,131 @@ th.r{text-align:right}
 #lg-kpis .dp-kpi .l{font-size:10px}
 .lg-wrap+.ds-hint{margin-top:10px}
 /* /LAG */
+/* ═══ MOBILE ═══ */
+.mnav,.mfab,.msheet,.dp-cards{display:none}
+@media(max-width:768px){
+  html,body{overflow-x:hidden;max-width:100vw}
+  body{-webkit-text-size-adjust:100%}
+  input,select,textarea{font-size:16px !important}
+  .btn{min-height:38px}
+  /* Kopfzeile: nur Logo + ⚙ + Nutzer */
+  .header{padding:0 12px;height:52px;gap:8px}
+  .header .nav,.header .sep,.header .logo-txt,.hright>.btn:not(.btn-ghost),#user-name{display:none !important}
+  .header-logo img{height:28px}
+  .header-logo:after{content:"HanseaERP";font-weight:800;font-size:15px;letter-spacing:.04em;color:#fff}
+  .hright{gap:8px}
+  .hright .btn-ghost{padding:6px 10px !important}
+  .main{padding:12px 12px 96px}
+  .page{padding-bottom:84px}
+  .ph{flex-wrap:wrap;gap:10px}
+  .pt{font-size:20px}
+  /* untere Navigation */
+  .mnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;background:#fff;border-top:1px solid var(--border);box-shadow:0 -4px 18px rgba(15,23,42,.12);padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
+  .mnav button{flex:1;border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;font-size:10px;font-weight:600;color:#64748b;border-radius:10px;cursor:pointer}
+  .mnav button span{font-size:20px;line-height:1}
+  .mnav button.on{color:#0e7490;background:#ecfeff}
+  .mfab{display:none;position:fixed;right:16px;bottom:calc(74px + env(safe-area-inset-bottom));z-index:61;width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,#0e7490,#06b6d4);color:#fff;font-size:30px;line-height:1;box-shadow:0 8px 22px rgba(14,116,144,.5);cursor:pointer}
+  .mfab.show{display:block}
+  .msheet{position:fixed;inset:0;z-index:70;background:rgba(15,23,42,.45);align-items:flex-end}
+  .msheet.open{display:flex}
+  .msheet>div{background:#fff;width:100%;border-radius:18px 18px 0 0;padding:14px 14px calc(18px + env(safe-area-inset-bottom))}
+  .msheet button{display:flex;align-items:center;gap:12px;width:100%;border:none;background:none;padding:14px 10px;font-size:16px;font-weight:600;border-radius:12px;text-align:left}
+  .msheet button:active{background:#f1f5f9}
+  .msheet button span{font-size:22px}
+  /* Dashboard */
+  .dh-hello{font-size:21px}
+  .dh-actions .btn-dark{display:none}
+  .dh-kpis{grid-template-columns:repeat(2,1fr)}
+  .dh-kv{font-size:21px}
+  .dh-w{padding:14px;border-radius:14px}
+  .dh-editbar{font-size:11px}
+  /* Dispo */
+  .dp-hero{padding:14px;margin-bottom:12px}
+  .dp-hero .ps,.dp-cap{display:none}
+  .dp-hero>div{width:100%}
+  .dp-planbox{width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;align-items:stretch;box-sizing:border-box}
+  .dp-planbox label{display:none}
+  .dp-planbox input[type=date]{grid-column:span 2;width:100%;min-width:0;box-sizing:border-box;padding:9px 8px}
+  .dp-planbox .btn{min-width:0;padding:8px 2px;font-size:11px;white-space:nowrap}
+  .dp-planbox select{grid-column:span 4;width:100%;padding:10px}
+  .dp-planbox .btn-amber{grid-column:span 3;font-size:14px}
+  .dp-planbox .btn[title*="E-Mail"]{grid-column:span 1;font-size:16px}
+  .dp-newrow{margin:0 0 12px}
+  .dp-newbtn{width:100%;padding:14px;font-size:17px}
+  #dp-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  #dp-kpis .dp-kpi{padding:10px 10px;min-width:0;border-radius:12px}
+  #dp-kpis .dp-kpi .v{font-size:16px}
+  #dp-kpis .dp-kpi .l{font-size:8px;letter-spacing:.04em}
+  .dp-bar{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .dp-bar #dp-q{grid-column:span 2;min-width:0 !important;width:100%}
+  .dp-bar label{display:none}
+  .dp-bar .btn:nth-of-type(2){display:none}
+  .dp-bar input[type=date]{width:100%;min-width:0}
+  .dp-rowtools{flex-direction:column;align-items:stretch}
+  .dp-tools{display:none !important}
+  .dp-chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+  .dp-chip{white-space:nowrap;flex:0 0 auto}
+  .dp-chiprow{flex-wrap:nowrap;overflow:hidden}
+  #dp-table{display:none}
+  .dp-cards{display:flex;flex-direction:column;gap:10px}
+  .dp-card{background:#fff;border:1px solid var(--border);border-left:5px solid var(--stc,#94a3b8);border-radius:14px;padding:12px 14px;box-shadow:0 2px 8px rgba(15,23,42,.06);cursor:pointer}
+  .dp-card.sel{outline:2px solid #2563eb}
+  .dp-card.cancelled{opacity:.6}
+  .dc-top{display:flex;align-items:center;gap:10px;justify-content:space-between}
+  .dc-top label{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;min-width:0}
+  .dc-top input[type=checkbox]{width:20px;height:20px;flex:0 0 auto}
+  .dc-kunde{font-size:13px;color:var(--text2);margin:4px 0 8px;font-weight:600}
+  .dc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:12px}
+  .dc-grid i{display:block;font-style:normal;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:1px}
+  .dc-route{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border2);font-size:11px;color:var(--text2);line-height:1.5}
+  .dc-act{display:flex;gap:8px;margin-top:10px}
+  .dc-act .btn{flex:1}
+  #dp-bulk{position:sticky;top:56px;z-index:20}
+  /* Tabellen in anderen Seiten scrollbar */
+  #page-inquiries table,#page-customers table,#page-dispostats table{display:block;overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+  #ds-daily,#ds-veh,.lg-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #ds-kpis{display:grid;grid-template-columns:1fr 1fr}
+  /* Lagerung als Karten */
+  .lg-wrap{max-height:none;overflow:visible;border-top:none}
+  .lg-t{min-width:0 !important;display:block}
+  .lg-t thead{display:none}
+  .lg-t tbody{display:flex;flex-direction:column;gap:10px;padding-top:10px}
+  .lg-t tr{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;background:#fff !important;border:1px solid var(--border);border-radius:14px;padding:10px 10px 6px;position:relative;box-shadow:0 2px 8px rgba(15,23,42,.06)}
+  .lg-t tr.in{border-left:5px solid #0e7490}
+  .lg-t td{display:block;background:transparent !important;border:none;padding:0 !important;width:auto !important;text-align:left !important}
+  .lg-t td::before{content:attr(data-l);display:block;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin:4px 0 0 6px}
+  .lg-t td.r{padding:6px 6px 0 !important}
+  .lg-t td:last-child{position:absolute;top:2px;right:2px}
+  .lg-t td:last-child::before{display:none}
+  .lg-t input{border-color:var(--border2);background:#fff;margin-top:1px}
+  .lg-t td:nth-child(2),.lg-t td:nth-child(8){grid-column:span 2}
+  #lg-kpis .dp-kpi{flex:1 1 44%}
+  .dp-newrow{display:none}
+  .dp-fgrid{grid-template-columns:1fr !important}
+  .dp-fgrid .fg,.dp-fgrid .fg.s2,.dp-fgrid .fg.s4{grid-column:auto !important}
+  .mf{flex-wrap:wrap;padding:10px 12px calc(10px + env(safe-area-inset-bottom));position:sticky;bottom:0;border-radius:0;z-index:5}
+  .mf .btn{flex:1 1 40%}
+  .dp-fgrid .fg>div{width:100%}
+  .md input,.md select,.md textarea{max-width:100%;min-width:0;box-sizing:border-box}
+  .lg-t tr.in td:first-child{box-shadow:none}
+  #page-dispostats .dp-hero>div:last-child{width:100%}
+  #page-dispostats .dp-hero>div:last-child{display:grid !important;grid-template-columns:auto 1fr;gap:8px;align-items:center}
+  #page-dispostats .dp-hero input[type=date]{width:100%;min-width:0;box-sizing:border-box}
+  #page-dispostats .card>.ph,#page-dispostats .card .ph{flex-wrap:wrap}
+  .ch>div:has(#ds-month){display:grid !important;grid-template-columns:repeat(3,1fr);width:100%}
+  .ch>div:has(#ds-month) .btn{font-size:11px;padding:8px 4px;white-space:normal}
+  #ds-month{grid-column:1/-1;order:-1;width:100%;box-sizing:border-box;padding:9px}
+  #ds-month ~ .btn,.btn-ghost[onclick^="dsMonthShift"],.btn-ghost[onclick^="dsToday"]{flex:1}
+  .dh-actions .btn-dark{display:none}
+  /* Dialoge als Vollbild */
+  .mo{padding:0;align-items:stretch}
+  .md,.md-sm,.md-md{max-width:100%;border-radius:0;border:none;margin:0;min-height:100%}
+  .mh{border-radius:0;padding:14px 16px;position:sticky;top:0;z-index:5}
+  .toast{bottom:84px}
+  .toolbar{flex-wrap:wrap}
+  .si{width:100%}
+}
+/* /MOBILE */
 </style>
 </head>
 <body>
@@ -3871,6 +3996,47 @@ function lgExport(){
 }
 (function(){const o=showPage;showPage=function(id,btn){o(id,btn);if(id==='lagerung')lgLoad()}})();
 // /LAGJS
+// ═══ MOBILE ═══
+const mqM=window.matchMedia('(max-width:768px)');
+(function(){
+  const nav=document.createElement('nav');nav.className='mnav';nav.id='mnav';
+  nav.innerHTML=[['dashboard','🏠','Start'],['dispo','🚛','Dispo'],['dispostats','📊','Statistik'],['lagerung','📦','Lagerung']].map(([id,ic,l])=>`<button data-p="${id}" onclick="showPage('${id}');window.scrollTo(0,0)"><span>${ic}</span>${l}</button>`).join('')+'<button data-p="more" onclick="mSheet(true)"><span>☰</span>Mehr</button>';
+  document.body.appendChild(nav);
+  const sh=document.createElement('div');sh.className='msheet';sh.id='msheet';sh.onclick=e=>{if(e.target===sh)mSheet(false)};
+  sh.innerHTML='<div>'+[['inquiries','📋','Anfragen'],['customers','👥','Kunden'],['email','✉️','E-Mail']].map(([id,ic,l])=>`<button onclick="mSheet(false);showPage('${id}');window.scrollTo(0,0)"><span>${ic}</span>${l}</button>`).join('')+'</div>';
+  document.body.appendChild(sh);
+  const fab=document.createElement('button');fab.className='mfab';fab.id='mfab';fab.textContent='＋';fab.onclick=mFab;document.body.appendChild(fab);
+})();
+function mSheet(o){document.getElementById('msheet').classList.toggle('open',!!o)}
+function mCur(){const p=document.querySelector('.page.active');return p?p.id.replace('page-',''):'dashboard'}
+function mFab(){const c=mCur();if(c==='dispo')dispoOpen();else if(c==='inquiries')openNewInquiry();else if(c==='lagerung')lgAdd();else if(c==='customers'&&window.openNewCustomer)openNewCustomer()}
+function mSync(){
+  const c=mCur(),main=['dashboard','dispo','dispostats','lagerung'];
+  document.querySelectorAll('#mnav button').forEach(b=>b.classList.toggle('on',b.dataset.p===c||(b.dataset.p==='more'&&!main.includes(c))));
+  document.getElementById('mfab').classList.toggle('show',['dispo','inquiries','lagerung','customers'].includes(c));
+}
+(function(){const o=showPage;showPage=function(id,btn){o(id,btn);mSync()}})();
+function dpCardsRender(){
+  let box=document.getElementById('dp-cards');
+  if(!box){const t=document.getElementById('dp-table');if(!t)return;box=document.createElement('div');box.id='dp-cards';box.className='dp-cards';t.parentNode.insertBefore(box,t.nextSibling)}
+  if(!mqM.matches){box.innerHTML='';return}
+  const lbl=document.getElementById('dp-lbl');if(lbl)lbl.textContent=lbl.textContent.replace(' · Doppelklick auf eine Zeile = bearbeiten','');
+  const list=dpFiltered();
+  if(!list.length){box.innerHTML=emptyState('🚛',dispoData.length?'Keine Treffer für diese Filter':'Noch keine Dispo-Aufträge');return}
+  const f=(l,v)=>v?`<div><i>${l}</i>${dpEsc(v)}</div>`:'';
+  box.innerHTML=list.map(d=>{const s=d.status||'offen',route=[d.aufnahme,d.gestellung,d.leerdepot].filter(Boolean).map(dpEsc).join(' → ');
+   return `<div class="dp-card ${dpSel.has(d.id)?'sel':''} ${s==='storniert'?'cancelled':''}" style="--stc:${dpStColor(s)}" onclick="dispoOpen('${d.id}')">
+    <div class="dc-top"><label onclick="event.stopPropagation()"><input type="checkbox" ${dpSel.has(d.id)?'checked':''} onchange="dpToggleSel('${d.id}',this.checked)">${dpEsc(d.auftragsnr||d.nr||'–')}</label><span class="dp-badge" style="--c:${dpStColor(s)}">${dpEsc(DP_ST[s]||s)}</span></div>
+    ${d.kunde?`<div class="dc-kunde">${dpEsc(d.kunde)}</div>`:'<div style="height:6px"></div>'}
+    <div class="dc-grid"><div><i>Lieferdatum</i>${dpDate(d.lieferdatum)}</div>${f('Fahrzeug',d.fahrzeug_nr)}${f('Container',d.container_nr)}${d.verkaufspreis!==''&&d.verkaufspreis!=null?`<div><i>Verkauf</i>${eur(dpNum(d.verkaufspreis))}</div>`:''}</div>
+    ${route?`<div class="dc-route">${route}</div>`:''}
+    <div class="dc-act" onclick="event.stopPropagation()"><button class="btn btn-sm btn-dark" onclick="dispoOpen('${d.id}')">✏ Bearbeiten</button><button class="btn btn-sm" onclick="dispoPdf('${d.id}')">📄 PDF</button></div></div>`}).join('');
+}
+(function(){const o=dispoRender;dispoRender=function(){o();try{dpCardsRender()}catch(e){}}})();
+(function(){const o=lgRender;lgRender=function(){o();document.querySelectorAll('.lg-t tbody tr').forEach(tr=>{const th=[...document.querySelectorAll('.lg-t thead th')];[...tr.children].forEach((td,i)=>{if(th[i])td.dataset.l=th[i].textContent})})}})();
+mqM.addEventListener('change',()=>{try{dispoRender()}catch(e){}});
+document.addEventListener('DOMContentLoaded',mSync);
+// /MOBILEJS
 </script>
 </body>
 </html>
