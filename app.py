@@ -1429,6 +1429,7 @@ def _pdf_sel(cfg):
     return s
 
 def _e(v): return _xesc(str(v)) if v not in (None, '') else ''
+def _nl(v): return _e(v).replace('\r\n', '\n').replace('\r', '\n').replace('\n', '<br/>')  # Zeilenumbrüche aus der Eingabemaske übernehmen
 def _fd(v):
     try: return datetime.strptime(str(v)[:10], '%Y-%m-%d').strftime('%d.%m.%Y')
     except: return _e(v) or '-'
@@ -1509,7 +1510,7 @@ def _plan_columns(sel):
     simple('slot_gebucht', 1.6, lambda d: 'Ja' if str(d.get('slot_gebucht', '')).lower() in ('ja', 'true', '1') else 'Nein')
     simple('reederei', 1.8); simple('status', 1.5, lambda d: _e(DISPO_STATUS.get(d.get('status'), d.get('status'))) or '-')
     simple('einkaufspreis', 1.5, lambda d: _money(d.get('einkaufspreis'))); simple('verkaufspreis', 1.5, lambda d: _money(d.get('verkaufspreis')))
-    simple('anmerkung', 3.0)
+    simple('anmerkung', 3.0, lambda d: _nl(d.get('anmerkung')) or '-')
     return c
 
 def _plan_sort(d):
@@ -1603,7 +1604,7 @@ def _order_story(d, cfg, s, W):
         cont.append(('Weitere Container', '<br/>'.join(_e(n) + (f' ({_e(t)})' if t else '') for n, t in _extras(d))))
     add('container', cont)
     add('finanzen', [F(k, _money(d.get(k))) for k in ('einkaufspreis', 'verkaufspreis') if k in sel])
-    if 'anmerkung' in sel: add('anmerkung', [F('anmerkung')], 1)
+    if 'anmerkung' in sel: add('anmerkung', [F('anmerkung', _nl(d.get('anmerkung')) or '-')], 1)
     sig = Table([[Paragraph('Fahrer / Unterschrift / Datum:<br/><br/><br/>______________________________', s['small']),
                   Paragraph('Empfangsbestätigung / Stempel:<br/><br/><br/>______________________________', s['small'])]], colWidths=[W / 2, W / 2])
     sig.setStyle(TableStyle([('BOX', (0,0), (-1,-1), 0.5, _BORDER), ('INNERGRID', (0,0), (-1,-1), 0.5, _BORDER), ('TOPPADDING', (0,0), (-1,-1), 6), ('BOTTOMPADDING', (0,0), (-1,-1), 8), ('LEFTPADDING', (0,0), (-1,-1), 8)]))
