@@ -606,6 +606,14 @@ th.r{text-align:right}
 .ds-st tfoot .pill{background:#fff}
 .ds-st tfoot .pill.neg{background:#fee2e2}
 #ds-veh{overflow-x:auto;padding:0 14px 14px}
+/* LG2 */
+.lg-t th.hl{background:#b45309}
+.lg-t td.hl{background:#fff4cc !important}
+.lg-t tr.sel td{background:#dbeafe !important}
+.lg-t tr.sel td.hl{background:#fde68a !important}
+.lg-t th.lg-c,.lg-t td.lg-c{width:34px;min-width:34px;text-align:center;padding:2px 6px}
+.lg-t td.lg-c input{width:16px;height:16px;cursor:pointer}
+#lg-bulk{margin:10px 14px 0}
 .ds-st tfoot .g{color:#fff}
 .ds-t td.r,.ds-t th.r{text-align:center}
 /* ═══ MOBILE ═══ */
@@ -705,7 +713,16 @@ th.r{text-align:right}
   .lg-t td:last-child{position:absolute;top:2px;right:2px}
   .lg-t td:last-child::before{display:none}
   .lg-t input{border-color:var(--border2);background:#fff;margin-top:1px}
-  .lg-t td:nth-child(2),.lg-t td:nth-child(8){grid-column:span 2}
+  .lg-t td:nth-child(3),.lg-t td:nth-child(9){grid-column:span 2}
+  .lg-t td.lg-c{grid-column:span 2;text-align:left !important;padding:2px 4px !important}
+  .lg-t td.lg-c::before{display:none !important}
+  .lg-t td.lg-c::after{content:'Auswählen';margin-left:8px;vertical-align:middle;font-size:12px;color:var(--text2)}
+  .lg-t td.lg-c{display:flex !important;align-items:center}
+  .lg-t td.lg-c input{width:20px !important;height:20px;margin:0}
+  .lg-t td.hl{background:#fff4cc !important;border-radius:8px}
+  .lg-t tr.sel{background:#eff6ff !important;border-color:#2563eb}
+  .lg-t tr.sel td.hl{background:#fde68a !important}
+  #lg-bulk{position:sticky;top:56px;z-index:20;margin:8px 0 0}
   #lg-kpis .dp-kpi{flex:1 1 44%}
   .dp-newrow{display:none}
   .dp-fgrid{grid-template-columns:1fr !important}
@@ -855,6 +872,16 @@ th.r{text-align:right}
     <div class="toolbar" style="flex-wrap:wrap;gap:8px">
       <input class="si" type="text" id="lg-q" placeholder="Suchen (Kunde, Container, Lagerort …)" oninput="lgRender()">
       <div class="dp-chips" id="lg-chips"></div>
+    </div>
+    <div class="dp-bulk" id="lg-bulk">
+      <b id="lg-bulk-cnt">0 ausgewählt</b><span class="sep"></span>
+      <label>Feld setzen:</label><select id="lg-bk-field" onchange="lgBkField()">
+        <option value="kunde">Kunde</option><option value="lagerort">Lagerort</option><option value="einlagerung">Datum Einlagerung</option><option value="auslagerung">Datum Auslagerung</option><option value="destination">Destination</option><option value="anmerkung">Anmerkung</option><option value="ek_tag">EK/Tag</option><option value="vk_tag">VK/Tag</option><option value="tage_override">Tage (manuell)</option></select><span id="lg-bk-val"></span>
+      <button class="btn btn-sm btn-go" onclick="lgBulkApply()">✔ Anwenden</button><span class="sep"></span>
+      <button class="btn btn-sm" onclick="lgBulkOut()">📤 Heute auslagern</button>
+      <button class="btn btn-sm" onclick="lgExport(true)">⬇ CSV</button>
+      <button class="btn btn-sm btn-red" onclick="lgBulkDel()">🗑 Löschen</button>
+      <button class="btn btn-sm" onclick="lgClearSel()">Auswahl aufheben</button>
     </div>
     <div class="lg-wrap" id="lg-table"></div>
     <div class="ds-hint">Alle Felder sind direkt in der Tabelle bearbeitbar und werden automatisch gespeichert. Tage = Einlagerung bis Auslagerung (beide Tage zählen); ohne Auslagerungsdatum läuft die Zählung bis heute. Eine eigene Zahl in „Tage“ überschreibt die Berechnung (leer lassen = automatisch). EK/VK gesamt = Tage × Preis pro Tag.</div>
@@ -4022,7 +4049,7 @@ document.addEventListener('DOMContentLoaded',dhRender);
 setInterval(()=>{if(!dhEdit&&document.getElementById('page-dashboard').classList.contains('active'))dhRender()},60000);
 // /DASH2JS
 // ═══ LAGERUNG ═══
-let lgData=[],lgFilter='alle';
+let lgData=[],lgFilter='alle',lgSel=new Set();
 const lgNum=v=>{const n=parseFloat(String(v==null?'':v).replace(',','.'));return isNaN(n)?0:n};
 const lgMoney=v=>v===''||v==null?'':lgNum(v).toFixed(2).replace('.',',');
 function lgDays(r){
@@ -4054,17 +4081,18 @@ function lgRender(){
   const list=lgVisible();lgKpis(list);
   const kd=[...new Set([...(typeof customers!=='undefined'?customers:[]).map(c=>c.company||c.name),...lgData.map(r=>r.kunde),...dispoData.map(d=>d.kunde)].filter(Boolean))].sort();
   const dl='<datalist id="lg-dl-k">'+kd.map(x=>`<option value="${dpEsc(x)}">`).join('')+'</datalist><datalist id="lg-dl-o">'+[...new Set(lgData.map(r=>r.lagerort).filter(Boolean))].map(x=>`<option value="${dpEsc(x)}">`).join('')+'</datalist><datalist id="lg-dl-d">'+[...new Set(lgData.map(r=>r.destination).filter(Boolean))].map(x=>`<option value="${dpEsc(x)}">`).join('')+'</datalist>';
-  if(!list.length){document.getElementById('lg-table').innerHTML='<div class="lg-empty">'+(lgData.length?'Keine Treffer für diesen Filter.':'Noch keine Container eingelagert. Mit „＋ Container einlagern“ den ersten Eintrag anlegen.')+'</div>';return}
+  if(!list.length){lgSelUpdate([]);document.getElementById('lg-table').innerHTML='<div class="lg-empty">'+(lgData.length?'Keine Treffer für diesen Filter.':'Noch keine Container eingelagert. Mit „＋ Container einlagern“ den ersten Eintrag anlegen.')+'</div>';return}
   const inp=(r,f,t,extra)=>`<input type="${t||'text'}" value="${dpEsc(r[f]||'')}" ${extra||''} onchange="lgSet('${r.id}','${f}',this.value,this)">`;
-  const rows=list.map(r=>{const c=lgCalc(r);return `<tr id="lg-${r.id}" class="${r.auslagerung?'out':'in'}">
-   <td>${inp(r,'einlagerung','date')}</td><td>${inp(r,'kunde','text','list="lg-dl-k"')}</td><td>${inp(r,'container','text','placeholder="ABCD1234567"')}</td><td>${inp(r,'lagerort','text','list="lg-dl-o"')}</td>
-   <td>${inp(r,'auslagerung','date')}</td><td>${inp(r,'destination','text','list="lg-dl-d"')}</td>
-   <td style="width:70px"><input class="n" inputmode="numeric" value="${dpEsc(r.tage_override||'')}" placeholder="${c.t}" title="Leer = automatisch (${lgCalc({...r,tage_override:''}).t})" onchange="lgSet('${r.id}','tage_override',this.value,this)"></td>
+  const rows=list.map(r=>{const c=lgCalc(r);return `<tr id="lg-${r.id}" class="${r.auslagerung?'out':'in'}${lgSel.has(r.id)?' sel':''}">
+   <td class="lg-c"><input type="checkbox" ${lgSel.has(r.id)?'checked':''} onchange="lgToggle('${r.id}',this.checked)"></td><td>${inp(r,'einlagerung','date')}</td><td>${inp(r,'kunde','text','list="lg-dl-k"')}</td><td>${inp(r,'container','text','placeholder="ABCD1234567"')}</td><td>${inp(r,'lagerort','text','list="lg-dl-o"')}</td>
+   <td class="hl">${inp(r,'auslagerung','date')}</td><td>${inp(r,'destination','text','list="lg-dl-d"')}</td>
+   <td class="hl" style="width:70px"><input class="n" data-t="1" inputmode="numeric" value="${dpEsc(r.tage_override||'')}" placeholder="${c.t}" title="Leer = automatisch (${lgCalc({...r,tage_override:''}).t})" onchange="lgSet('${r.id}','tage_override',this.value,this)"></td>
    <td>${inp(r,'anmerkung')}</td>
    <td style="width:80px"><input class="n" inputmode="decimal" value="${lgMoney(r.ek_tag)}" placeholder="–" onchange="lgSet('${r.id}','ek_tag',this.value,this,1)"></td><td class="r" data-c="ek"><b>${eur(c.ek)}</b></td>
    <td style="width:80px"><input class="n" inputmode="decimal" value="${lgMoney(r.vk_tag)}" placeholder="–" onchange="lgSet('${r.id}','vk_tag',this.value,this,1)"></td><td class="r" data-c="vk"><b>${eur(c.vk)}</b></td>
    <td class="r" data-c="m">${eur(c.m)}</td><td><button class="lg-x" title="Eintrag löschen" onclick="lgDel('${r.id}')">✕</button></td></tr>`}).join('');
-  document.getElementById('lg-table').innerHTML=dl+`<table class="lg-t"><thead><tr><th style="min-width:150px">Datum Einlagerung</th><th style="min-width:170px">Kunde</th><th style="min-width:140px">Containernummer</th><th style="min-width:150px">Lagerort</th><th style="min-width:150px">Datum Auslagerung</th><th style="min-width:150px">Destination</th><th style="min-width:60px">Tage</th><th style="min-width:170px">Anmerkung</th><th style="min-width:75px">EK/Tag</th><th style="min-width:95px">EK gesamt</th><th style="min-width:75px">VK/Tag</th><th style="min-width:95px">VK gesamt</th><th style="min-width:90px">Marge</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+  document.getElementById('lg-table').innerHTML=dl+`<table class="lg-t"><thead><tr><th class="lg-c"><input type="checkbox" id="lg-all" title="Alle sichtbaren auswählen" onchange="lgSelAll(this.checked)"></th><th style="min-width:150px">Datum Einlagerung</th><th style="min-width:170px">Kunde</th><th style="min-width:140px">Containernummer</th><th style="min-width:150px">Lagerort</th><th class="hl" style="min-width:150px">Datum Auslagerung</th><th style="min-width:150px">Destination</th><th class="hl" style="min-width:60px">Tage</th><th style="min-width:170px">Anmerkung</th><th style="min-width:75px">EK/Tag</th><th style="min-width:95px">EK gesamt</th><th style="min-width:75px">VK/Tag</th><th style="min-width:95px">VK gesamt</th><th style="min-width:90px">Marge</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+  lgSelUpdate(list);
 }
 async function lgSet(id,f,v,el,money){
   const r=lgData.find(x=>x.id===id);if(!r)return;
@@ -4075,21 +4103,56 @@ async function lgSet(id,f,v,el,money){
   const tr=document.getElementById('lg-'+id);
   if(tr){const c=lgCalc(r);tr.className=r.auslagerung?'out':'in';
     tr.querySelector('[data-c=ek]').innerHTML='<b>'+eur(c.ek)+'</b>';tr.querySelector('[data-c=vk]').innerHTML='<b>'+eur(c.vk)+'</b>';tr.querySelector('[data-c=m]').textContent=eur(c.m);
-    const ti=tr.querySelectorAll('input')[6];if(ti)ti.placeholder=c.t}
+    const ti=tr.querySelector('input[data-t]');if(ti)ti.placeholder=c.t}
   lgKpis(lgVisible());
   try{await fetch('/api/lagerung/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)})}catch(e){alert('Speichern fehlgeschlagen')}
 }
 async function lgAdd(){
   const r=await (await fetch('/api/lagerung',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({einlagerung:dpToday()})})).json();
   lgData.push(r);lgFilter='alle';const q=document.getElementById('lg-q');if(q)q.value='';lgRender();
-  const tr=document.getElementById('lg-'+r.id);if(tr){tr.scrollIntoView({block:'center'});const i=tr.querySelectorAll('input')[1];if(i)i.focus()}
+  const tr=document.getElementById('lg-'+r.id);if(tr){tr.scrollIntoView({block:'center'});const i=tr.querySelectorAll('input')[2];if(i)i.focus()}
 }
 async function lgDel(id){
   const r=lgData.find(x=>x.id===id);if(!r||!confirm('Eintrag '+(r.container||'ohne Containernummer')+' wirklich löschen?'))return;
-  await fetch('/api/lagerung/'+id,{method:'DELETE'});lgData=lgData.filter(x=>x.id!==id);lgRender();
+  await fetch('/api/lagerung/'+id,{method:'DELETE'});lgData=lgData.filter(x=>x.id!==id);lgSel.delete(id);lgRender();
 }
-function lgExport(){
-  const list=lgVisible(),q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"',de=iso=>iso?iso.split('-').reverse().join('.'):'';
+function lgSelUpdate(list){
+  list=list||lgVisible();
+  const b=document.getElementById('lg-bulk');if(b)b.className='dp-bulk'+(lgSel.size?' show':'');
+  const c=document.getElementById('lg-bulk-cnt');if(c)c.textContent=lgSel.size+' ausgewählt';
+  const a=document.getElementById('lg-all');if(a){const n=list.filter(r=>lgSel.has(r.id)).length;a.checked=list.length>0&&n===list.length;a.indeterminate=n>0&&n<list.length}
+  if(lgSel.size&&!document.getElementById('lg-bk-val').firstChild)lgBkField();
+}
+function lgToggle(id,c){c?lgSel.add(id):lgSel.delete(id);const tr=document.getElementById('lg-'+id);if(tr)tr.classList.toggle('sel',c);lgSelUpdate()}
+function lgSelAll(c){lgVisible().forEach(r=>c?lgSel.add(r.id):lgSel.delete(r.id));lgRender()}
+function lgClearSel(){lgSel.clear();lgRender()}
+function lgBkField(){
+  const k=document.getElementById('lg-bk-field').value,d=['einlagerung','auslagerung'].includes(k),m=['ek_tag','vk_tag'].includes(k),n=k==='tage_override';
+  document.getElementById('lg-bk-val').innerHTML=`<input id="lg-bk-v" type="${d?'date':'text'}" ${m||n?'inputmode="decimal"':''} placeholder="${d?'':'Wert'}" ${k==='kunde'?'list="lg-dl-k"':k==='lagerort'?'list="lg-dl-o"':k==='destination'?'list="lg-dl-d"':''}>`;
+}
+async function lgBulkPut(ids,fn){
+  await Promise.all(ids.map(id=>{const r=lgData.find(x=>x.id===id);if(!r)return;fn(r);return fetch('/api/lagerung/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)})}));
+}
+async function lgBulkApply(){
+  if(!lgSel.size)return;const sel=document.getElementById('lg-bk-field'),k=sel.value,lbl=sel.options[sel.selectedIndex].text;
+  let v=document.getElementById('lg-bk-v').value.trim();if(['ek_tag','vk_tag','tage_override'].includes(k))v=v.replace(',','.');
+  if(v===''&&!confirm(`Feld „${lbl}“ bei ${lgSel.size} Einträgen leeren?`))return;
+  try{await lgBulkPut([...lgSel],r=>{r[k]=v})}catch(e){alert('Speichern fehlgeschlagen')}
+  lgRender();toast(`${lbl} bei ${lgSel.size} Einträgen gesetzt ✓`);
+}
+async function lgBulkOut(){
+  if(!lgSel.size)return;const t=dpToday();
+  if(!confirm(`${lgSel.size} Einträge heute (${t.split('-').reverse().join('.')}) auslagern?`))return;
+  try{await lgBulkPut([...lgSel],r=>{r.auslagerung=t})}catch(e){alert('Speichern fehlgeschlagen')}
+  lgRender();toast('Ausgelagert ✓');
+}
+async function lgBulkDel(){
+  if(!lgSel.size||!confirm(lgSel.size+' Einträge wirklich löschen?'))return;
+  const ids=[...lgSel];await Promise.all(ids.map(id=>fetch('/api/lagerung/'+id,{method:'DELETE'})));
+  lgData=lgData.filter(x=>!lgSel.has(x.id));lgSel.clear();lgRender();toast('Gelöscht');
+}
+function lgExport(onlySel){
+  const list=onlySel?lgData.filter(r=>lgSel.has(r.id)).sort((a,b)=>(b.einlagerung||'9999').localeCompare(a.einlagerung||'9999')):lgVisible(),q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"',de=iso=>iso?iso.split('-').reverse().join('.'):'';
   const n=v=>String(Math.round(v*100)/100).replace('.',',');
   const rows=[['Datum Einlagerung','Kunde','Containernummer','Lagerort','Datum Auslagerung','Destination','Tage','Anmerkung','EK/Tag','EK gesamt','VK/Tag','VK gesamt','Marge']].concat(list.map(r=>{const c=lgCalc(r);return[de(r.einlagerung),r.kunde,r.container,r.lagerort,de(r.auslagerung),r.destination,c.t,r.anmerkung,n(lgNum(r.ek_tag)),n(c.ek),n(lgNum(r.vk_tag)),n(c.vk),n(c.m)]}));
   const csv='﻿'+rows.map(r=>r.map(q).join(';')).join('\r\n');
@@ -4097,6 +4160,58 @@ function lgExport(){
 }
 (function(){const o=showPage;showPage=function(id,btn){o(id,btn);if(id==='lagerung')lgLoad()}})();
 // /LAGJS
+
+function mStatus(id){
+  const d=dispoData.find(x=>x.id===id);if(!d)return;const cur=d.status||'offen';
+  const all=[...new Set([...Object.keys(DP_ST),...(dpCfg.status||[]).map(dpStNorm)])];
+  const sh=document.getElementById('msheet');
+  sh.innerHTML='<div><div style="font-weight:800;font-size:15px;padding:2px 10px 8px">Status ändern · '+dpEsc(d.auftragsnr||d.nr||'')+'</div>'+all.map(k=>`<button onclick="mSetStatus('${id}','${k}')" style="${k===cur?'background:#f1f5f9':''}"><span style="width:14px;height:14px;border-radius:50%;background:${dpStColor(k)};display:inline-block;flex:0 0 auto"></span>${dpEsc(DP_ST[k]||k)}${k===cur?' ✓':''}</button>`).join('')+'</div>';
+  sh.classList.add('open');
+}
+async function mSetStatus(id,k){
+  mSheet(false);const d=dispoData.find(x=>x.id===id);if(!d||(d.status||'offen')===k)return;
+  await fetch('/api/dispo/'+id,{method:'PUT',headers:J,body:JSON.stringify({...d,status:k})});await dispoLoad();toast('Status: '+(DP_ST[k]||k),'success');
+}
+function mMenuHTML(){return '<div>'+[['inquiries','📋','Anfragen'],['customers','👥','Kunden'],['email','✉️','E-Mail']].map(([id,ic,l])=>`<button onclick="mSheet(false);showPage('${id}');window.scrollTo(0,0)"><span>${ic}</span>${l}</button>`).join('')+'</div>'}
+mSheet=function(o){const sh=document.getElementById('msheet');if(o){sh.innerHTML=mMenuHTML();sh.classList.add('open')}else sh.classList.remove('open')};
+function dpPlanTgl(){document.getElementById('page-dispo').classList.toggle('plan-open')}
+function dpFiltTgl(){document.getElementById('page-dispo').classList.toggle('filt-open')}
+function dpFiltCount(){return (dpStSel?dpStSel.size:0)+(dpVhSel?dpVhSel.size:0)+(document.getElementById('dp-f-from').value?1:0)+(document.getElementById('dp-f-to').value?1:0)}
+function mDispoUI(){
+  const pg=document.getElementById('page-dispo');if(!pg)return;
+  const hero=pg.querySelector('.dp-hero>div:last-child');
+  if(hero&&!document.getElementById('m-ptgl')){const b=document.createElement('button');b.id='m-ptgl';b.className='m-tgl mobile-only';b.innerHTML='<span>📋 Tagesplan / PDF erstellen</span><span class="ar">▾</span>';b.onclick=dpPlanTgl;hero.insertBefore(b,hero.firstChild)}
+  const bar=pg.querySelector('.dp-bar');
+  if(bar&&!document.getElementById('m-ftgl')){const b=document.createElement('button');b.id='m-ftgl';b.className='m-ftgl';b.onclick=dpFiltTgl;bar.parentNode.insertBefore(b,bar)}
+  const f=document.getElementById('m-ftgl');if(f){const n=dpFiltCount();f.innerHTML='🔎 Filter'+(n?' <b>'+n+' aktiv</b>':'')+(pg.classList.contains('filt-open')?' ▴':' ▾')}
+}
+(function(){const o=dispoRender;dispoRender=function(){o();try{mDispoUI()}catch(e){}}})();
+
+function mStatus(id){
+  const d=dispoData.find(x=>x.id===id);if(!d)return;const cur=d.status||'offen';
+  const all=[...new Set([...Object.keys(DP_ST),...(dpCfg.status||[]).map(dpStNorm)])];
+  const sh=document.getElementById('msheet');
+  sh.innerHTML='<div><div style="font-weight:800;font-size:15px;padding:2px 10px 8px">Status ändern · '+dpEsc(d.auftragsnr||d.nr||'')+'</div>'+all.map(k=>`<button onclick="mSetStatus('${id}','${k}')" style="${k===cur?'background:#f1f5f9':''}"><span style="width:14px;height:14px;border-radius:50%;background:${dpStColor(k)};display:inline-block;flex:0 0 auto"></span>${dpEsc(DP_ST[k]||k)}${k===cur?' ✓':''}</button>`).join('')+'</div>';
+  sh.classList.add('open');
+}
+async function mSetStatus(id,k){
+  mSheet(false);const d=dispoData.find(x=>x.id===id);if(!d||(d.status||'offen')===k)return;
+  await fetch('/api/dispo/'+id,{method:'PUT',headers:J,body:JSON.stringify({...d,status:k})});await dispoLoad();toast('Status: '+(DP_ST[k]||k),'success');
+}
+function mMenuHTML(){return '<div>'+[['inquiries','📋','Anfragen'],['customers','👥','Kunden'],['email','✉️','E-Mail']].map(([id,ic,l])=>`<button onclick="mSheet(false);showPage('${id}');window.scrollTo(0,0)"><span>${ic}</span>${l}</button>`).join('')+'</div>'}
+mSheet=function(o){const sh=document.getElementById('msheet');if(o){sh.innerHTML=mMenuHTML();sh.classList.add('open')}else sh.classList.remove('open')};
+function dpPlanTgl(){document.getElementById('page-dispo').classList.toggle('plan-open')}
+function dpFiltTgl(){document.getElementById('page-dispo').classList.toggle('filt-open')}
+function dpFiltCount(){return (dpStSel?dpStSel.size:0)+(dpVhSel?dpVhSel.size:0)+(document.getElementById('dp-f-from').value?1:0)+(document.getElementById('dp-f-to').value?1:0)}
+function mDispoUI(){
+  const pg=document.getElementById('page-dispo');if(!pg)return;
+  const hero=pg.querySelector('.dp-hero>div:last-child');
+  if(hero&&!document.getElementById('m-ptgl')){const b=document.createElement('button');b.id='m-ptgl';b.className='m-tgl mobile-only';b.innerHTML='<span>📋 Tagesplan / PDF erstellen</span><span class="ar">▾</span>';b.onclick=dpPlanTgl;hero.insertBefore(b,hero.firstChild)}
+  const bar=pg.querySelector('.dp-bar');
+  if(bar&&!document.getElementById('m-ftgl')){const b=document.createElement('button');b.id='m-ftgl';b.className='m-ftgl';b.onclick=dpFiltTgl;bar.parentNode.insertBefore(b,bar)}
+  const f=document.getElementById('m-ftgl');if(f){const n=dpFiltCount();f.innerHTML='🔎 Filter'+(n?' <b>'+n+' aktiv</b>':'')+(pg.classList.contains('filt-open')?' ▴':' ▾')}
+}
+(function(){const o=dispoRender;dispoRender=function(){o();try{mDispoUI()}catch(e){}}})();
 
 function mStatus(id){
   const d=dispoData.find(x=>x.id===id);if(!d)return;const cur=d.status||'offen';
