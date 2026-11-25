@@ -6,7 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import hmac, time
 from flask import (Flask, request, jsonify, send_file, render_template,
                    send_from_directory, session, redirect, url_for, abort)
-import json, os, sys, uuid, io, zipfile, smtplib, copy, hashlib, secrets, functools
+import threading, json, os, sys, uuid, io, zipfile, smtplib, copy, hashlib, secrets, functools
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
@@ -131,7 +131,14 @@ def load_db():
         return empty
     try:
         with open(DATA_FILE, encoding='utf-8') as f:
-            db = json.load(f)
+            raw = f.read()
+        try:
+            db = json.loads(raw)
+        except json.JSONDecodeError:
+            # Beschädigte Datei (z. B. Reste nach parallelem Schreiben): ersten gültigen JSON-Block retten
+            db, end = json.JSONDecoder().raw_decode(raw.lstrip())
+            print(f'load_db: db.json hatte {len(raw.lstrip())-end} Zeichen Restdaten – repariert')
+            save_db(db)
         if 'invoices' in db or 'invoice_counter' in db:   # Altdaten Rechnungen/Mahnwesen/Statistik entfernen
             db.pop('invoices',None); db.pop('invoice_counter',None); save_db(db)
         for k,v in [('customers',[]),('inquiries',[]),('order_counter',len(db.get('orders',[]))+1)]:
@@ -143,10 +150,11 @@ def load_db():
 
 def save_db(db):
     os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
-    tmp = DATA_FILE + '.tmp'
+    tmp = f'{DATA_FILE}.{os.getpid()}.{threading.get_ident()}.tmp'   # eindeutig je Worker/Thread (sonst überschreiben sich parallele Speicherungen)
     try:
         with open(tmp, 'w', encoding='utf-8') as f:
             json.dump(db, f, indent=2, ensure_ascii=False)
+            f.flush(); os.fsync(f.fileno())
         os.replace(tmp, DATA_FILE)  # atomic write
     except Exception as e:
         print(f'save_db error: {e}')
